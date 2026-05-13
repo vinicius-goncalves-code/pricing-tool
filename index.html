@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Precificação – Agência de Viagens Corporativas</title>
+<style>
+  :root {
+    --primary: #1a3a5c;
+    --primary-light: #2563a8;
+    --accent: #e8a020;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  header { background: var(--primary); color: #fff; padding: 14px 32px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  header .logo { font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
+  header .sub { font-size: 12px; opacity: .7; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 24px 16px; }
+
+  .steps { display: flex; gap: 0; margin-bottom: 28px; background: var(--card); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  .step-btn { flex: 1; padding: 14px 8px; text-align: center; cursor: pointer; border: none; background: transparent; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; transition: all .2s; }
+  .step-btn:hover { background: #f8fafc; color: var(--primary); }
+  .step-btn.active { color: var(--primary); border-bottom-color: var(--accent); background: #f0f7ff; }
+  .step-btn .num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--muted); font-size: 11px; margin-right: 6px; }
+  .step-btn.active .num { background: var(--primary); color: #fff; }
+  .step-btn.done .num { background: var(--success); color: #fff; }
+
+  .card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px; }
+  .card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 13px; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 20px; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8fafc; color: var(--primary); font-size: 11px; font-weight: 700; padding: 8px 10px; text-align: center; border: 1px solid var(--border); }
+  th.left { text-align: left; }
+  td { padding: 8px 10px; border: 1px solid var(--border); text-align: center; vertical-align: middle; font-size: 12px; }
+  td.label { font-weight: 600; text-align: left; color: var(--text); }
+  td .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-dom { background: #dbeafe; color: #1d4ed8; }
+  .badge-int { background: #ede9fe; color: #7c3aed; }
+  .badge-vip { background: #fef3c7; color: #92400e; }
+  tr:hover td { background: #f8fafc; }
+
+  input[type=number], input[type=text], select {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; color: var(--text); background: #fff; transition: border .15s;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(37,99,168,.12); }
+  input.fee-custom { background: #fffbf0; border-color: var(--accent); font-weight: 700; text-align: right; }
+
+  .radio-group { display: flex; flex-wrap: wrap; gap: 10px; }
+  .radio-option { flex: 1; min-width: 160px; }
+  .radio-option input { display: none; }
+  .radio-option label { display: block; padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .2s; font-size: 12px; }
+  .radio-option input:checked + label { border-color: var(--primary); background: #f0f7ff; color: var(--primary); font-weight: 600; }
+  .radio-option label:hover { border-color: var(--primary-light); background: #f8fbff; }
+
+  .fop-option { padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all .2s; }
+  .fop-option:hover { border-color: var(--primary-light); background: #f8fbff; }
+  .fop-option.selected { border-color: var(--primary); background: #f0f7ff; }
+  .fop-tag { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .tag-green  { background: #dcfce7; color: #16a34a; }
+  .tag-yellow { background: #fef9c3; color: #854d0e; }
+  .tag-orange { background: #ffedd5; color: #9a3412; }
+  .tag-red    { background: #fee2e2; color: #991b1b; }
+
+  .btn { padding: 10px 22px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all .2s; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { filter: brightness(1.1); }
+  .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+  .btn-outline:hover { background: var(--primary); color: #fff; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .nav-buttons { display: flex; justify-content: space-between; margin-top: 24px; }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .metric { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .metric .mlabel { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .metric .mvalue { font-size: 22px; font-weight: 700; color: var(--primary); }
+  .metric .msub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .metric.success { border-left: 4px solid var(--success); }
+  .metric.warning { border-left: 4px solid var(--warning); }
+  .metric.danger  { border-left: 4px solid var(--danger); }
+  .metric.accent  { border-left: 4px solid var(--accent); }
+
+  .fee-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .fee-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 18px; transition: all .2s; }
+  .fee-card.active-model { border-color: var(--accent); background: #fffbf0; }
+  .fee-card .fc-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .fee-card .fc-value { font-size: 26px; font-weight: 800; color: var(--primary); line-height: 1; }
+  .fee-card .fc-desc  { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+  .alert-warning { background: #fef9c3; border: 1px solid #fbbf24; color: #78350f; }
+  .alert-danger  { background: #fee2e2; border: 1px solid #fca5a5; color: #7f1d1d; }
+  .alert-success { background: #dcfce7; border: 1px solid #86efac; color: #14532d; }
+  .alert-info    { background: #e0f2fe; border: 1px solid #7dd3fc; color: #0c4a6e; }
+
+  .incentive-box { background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%); border-radius: var(--radius); padding: 20px; color: #fff; }
+  .incentive-box .ibtitle { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: .8; margin-bottom: 12px; }
+  .incentive-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.15); }
+  .incentive-row:last-child { border-bottom: none; }
+
+  .brow { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .brow:last-child { border-bottom: none; }
+  .brow.total { font-weight: 700; font-size: 14px; color: var(--primary); border-top: 2px solid var(--primary); margin-top: 4px; padding-top: 10px; }
+  .brow .bval { font-weight: 600; }
+  .bval.cost { color: var(--danger); }
+  .bval.rev  { color: var(--success); }
+  .bval.tax  { color: var(--warning); }
+  .bval.dim  { color: var(--muted); }
+
+  .divider { border: none; border-top: 2px dashed var(--border); margin: 18px 0; }
+
+  .consultant-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .pill-junior { background: #e0f2fe; color: #0369a1; }
+  .pill-pleno  { background: #e0f7fa; color: #00796b; }
+  .pill-senior { background: #f3e8ff; color: #7c3aed; }
+
+  .comm-positive { color: var(--success); font-weight: 700; }
+  .comm-negative { color: var(--danger); font-weight: 700; }
+
+  .section-title { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+  .section-desc  { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+
+  .inline-fields { display: flex; gap: 10px; flex-wrap: wrap; }
+  .inline-fields .field { flex: 1; min-width: 180px; }
+  .field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+
+  /* Panel extras (misto / fee-por-produto) */
+  .extra-panel { background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 14px; display: none; }
+  .extra-panel.show { display: block; }
+  .extra-panel-title { font-weight: 700; color: var(--primary); font-size: 13px; margin-bottom: 12px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width:700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Fee-per-product custom table */
+  .fpp-status { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .fpp-ok      { background: #dcfce7; color: #16a34a; }
+  .fpp-warn    { background: #fef9c3; color: #854d0e; }
+  .fpp-danger  { background: #fee2e2; color: #991b1b; }
+
+  @media print {
+    header, .steps, .nav-buttons, .section:not(.active) { display: none !important; }
+    .card { break-inside: avoid; }
+    body { background: #fff; }
+  }
+  @media (max-width: 700px) {
+    .steps { flex-wrap: wrap; }
+    .step-btn { min-width: 45%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">✈ PricingPro</div>
+    <div class="sub">Calculadora de Precificação – Agência de Viagens Corporativas</div>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:10px">
+    <button class="btn btn-outline btn-sm" style="color:#fff;border-color:rgba(255,255,255,.5)" onclick="resetAll()">↺ Reiniciar</button>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff" onclick="window.print()">🖨 Imprimir</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="steps">
+    <button class="step-btn active" id="step-tab-1" onclick="goStep(1)"><span class="num">1</span> Dados do Cliente</button>
+    <button class="step-btn" id="step-tab-2" onclick="goStep(2)"><span class="num">2</span> Forma de Pagamento</button>
+    <button class="step-btn" id="step-tab-3" onclick="goStep(3)"><span class="num">3</span> Modelo de FEE</button>
+    <button class="step-btn" id="step-tab-4" onclick="goStep(4)"><span class="num">4</span> Resultado</button>
+  </div>
+
+  <!-- ══════════ STEP 1 ══════════ -->
+  <div class="section active" id="section-1">
+    <div class="section-title">Dados do Cliente e Volume de Transações</div>
+    <div class="section-desc">Preencha o volume mensal de transações, o volume financeiro total e o percentual de adoção online para cada produto.</div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">👤 Identificação</div>
+      <div class="card-body">
+        <div class="inline-fields">
+          <div class="field"><label>Nome / Razão Social</label><input type="text" id="clientName" placeholder="Ex.: Empresa XYZ S.A."/></div>
+          <div class="field"><label>Vendedor Responsável</label><input type="text" id="sellerName" placeholder="Seu nome"/></div>
+          <div class="field"><label>Data da Proposta</label><input type="text" id="propDate"/></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">📊 Volume Mensal de Transações</div>
+      <div class="card-body" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th class="left" style="min-width:155px">Produto</th>
+              <th style="min-width:105px">Transações/mês</th>
+              <th style="min-width:140px">Volume Financeiro (R$)</th>
+              <th style="min-width:115px">Adoção Online %</th>
+              <th style="min-width:90px">Tx Online</th>
+              <th style="min-width:90px">Tx Offline</th>
+            </tr>
+          </thead>
+          <tbody id="txBody"></tbody>
+          <tfoot>
+            <tr style="background:#f8fafc;font-weight:700">
+              <td class="label">TOTAL</td>
+              <td id="tot-count">0</td>
+              <td id="tot-fin">R$ 0,00</td>
+              <td>–</td>
+              <td id="tot-online">0</td>
+              <td id="tot-offline">0</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="nav-buttons">
+      <div></div>
+      <button class="btn btn-primary" onclick="goStep(2)">Próximo: Forma de Pagamento →</button>
+    </div>
+  </div>
+
+  <!-- ══════════ STEP 2 ══════════ -->
+  <div class="section" id="section-2">
+    <div class="section-title">Forma de Pagamento (FOP)</div>
+    <div class="section-desc">A forma de pagamento do cliente impacta o custo de capital e deve ser refletida no FEE final.</div>
+
+    <div class="card">
+      <div class="card-header">💳 Tipo de Pagamento</div>
+      <div class="card-body">
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="fopType" id="fop-credit" value="credit" checked onchange="updateFOP()">
+            <label for="fop-credit"><strong>💳 Cartão de Crédito do Cliente</strong><br><span style="color:var(--muted);font-size:11px">Sem custo adicional para a agência</span></label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="fopType" id="fop-invoice" value="invoice" onchange="updateFOP()">
+            <label for="fop-invoice"><strong>📄 Faturado (Crédito da Agência)</strong><br><span style="color:var(--muted);font-size:11px">A agência oferece crédito — há custo de capital</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="fopFloatCard" style="display:none">
+      <div class="card-header">📅 Condição de Pagamento / Float</div>
+      <div class="card-body">
+        <p style="color:var(--muted);font-size:12px;margin-bottom:14px">Selecione a condição acordada com o cliente. O float total determina o custo de capital embutido no FEE.</p>
+        <div id="fopOptions"></div>
+      </div>
+    </div>
+
+    <div id="fopSummaryCard" class="card" style="display:none">
+      <div class="card-header">ℹ️ Resumo FOP</div>
+      <div class="card-body" id="fopSummary"></div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goStep(1)">← Voltar</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Próximo: Modelo de FEE →</button>
+    </div>
+  </div>
+
+  <!-- ══════════ STEP 3 ══════════ -->
+  <div class="section" id="section-3">
+    <div class="section-title">Modelo de Precificação</div>
+    <div class="section-desc">Escolha o formato de cobrança. O sistema calcula o valor mínimo para cobrir custos (incluindo encargos trabalhistas 75%), impostos e margem mínima de 1,5%.</div>
+
+    <div class="card">
+      <div class="card-header">🏷 Formato de FEE</div>
+      <div class="card-body">
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="feeModel" id="fee-transaction" value="transaction" checked onchange="updateModel()">
+            <label for="fee-transaction"><strong>🔢 Transaction FEE</strong><br><span style="color:var(--muted);font-size:11px">FEE único por transação</span></label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="feeModel" id="fee-management" value="management" onchange="updateModel()">
+            <label for="fee-management"><strong>📈 Management FEE</strong><br><span style="color:var(--muted);font-size:11px">% sobre o gasto total em viagens</span></label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="feeModel" id="fee-flat" value="flat" onchange="updateModel()">
+            <label for="fee-flat"><strong>📆 FLAT FEE</strong><br><span style="color:var(--muted);font-size:11px">Mensalidade fixa</span></label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="feeModel" id="fee-commission" value="commission" onchange="updateModel()">
+            <label for="fee-commission"><strong>🤝 Comissionamento</strong><br><span style="color:var(--muted);font-size:11px">Sem FEE ao cliente — receita via fornecedores</span></label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="feeModel" id="fee-misto" value="misto" onchange="updateModel()">
+            <label for="fee-misto"><strong>✂️ Modelo Misto</strong><br><span style="color:var(--muted);font-size:11px">FEE aéreo + comissão terrestre (hotel/carro)</span></label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="feeModel" id="fee-perprod" value="perprod" onchange="updateModel()">
+            <label for="fee-perprod"><strong>🗂 FEE por Produto</strong><br><span style="color:var(--muted);font-size:11px">Transaction FEE diferente por categoria</span></label>
+          </div>
+        </div>
+
+        <!-- Extra panel: FEE por Produto -->
+        <div class="extra-panel" id="panel-perprod">
+          <div class="extra-panel-title">Transaction FEE por Categoria — personalize os valores abaixo</div>
+          <div style="overflow-x:auto">
+            <table id="fppTable">
+              <thead>
+                <tr>
+                  <th class="left">Categoria</th>
+                  <th>Transações/mês</th>
+                  <th>FEE mínimo sugerido</th>
+                  <th style="min-width:130px">FEE cobrado ao cliente</th>
+                  <th>Receita gerada</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="fppBody"></tbody>
+              <tfoot id="fppFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Extra panel: Misto -->
+        <div class="extra-panel" id="panel-misto">
+          <div class="extra-panel-title">Modelo Misto: Aéreo via FEE + Terrestre (Hotel/Carro) via Comissão</div>
+          <div id="mistoPreview"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="previewCard">
+      <div class="card-header">👁 Preview de Custos</div>
+      <div class="card-body" id="previewBody"><p style="color:var(--muted)">Preencha os dados do cliente para visualizar.</p></div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goStep(2)">← Voltar</button>
+      <button class="btn btn-accent" onclick="goStep(4)">Ver Resultado Completo →</button>
+    </div>
+  </div>
+
+  <!-- ══════════ STEP 4 ══════════ -->
+  <div class="section" id="section-4">
+    <div id="resultContent"><p style="color:var(--muted)">Preencha as etapas anteriores para gerar o resultado.</p></div>
+    <div class="nav-buttons">
+      <button class="btn btn-outline" onclick="goStep(3)">← Voltar</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir Proposta</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const TYPES = [
+  { id:'AIRDOM', label:'Aéreo Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'junior', capacity:500, salary:2800 },
+  { id:'AIRINT', label:'Aéreo Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:3800 },
+  { id:'HOTDOM', label:'Hotel Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'pleno',  capacity:280, salary:3200 },
+  { id:'HOTINT', label:'Hotel Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:3800 },
+  { id:'CARDOM', label:'Carro Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'junior', capacity:500, salary:2800 },
+  { id:'CARINT', label:'Carro Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:3800 },
+  { id:'RODOV',  label:'Rodoviário',          badge:'dom', onlineCapable:false, consultantType:'junior', capacity:500, salary:2800 },
+  { id:'VIP',    label:'VIP',                 badge:'vip', onlineCapable:false, consultantType:'senior', capacity:250, salary:3800, fixedFee:50 },
+];
+
+const FOP_OPTIONS = [
+  { id:'d10', label:'Faturamento diário + 10 dias corridos',          float:11, tier:1 },
+  { id:'s5',  label:'Faturamento semanal + 5 dias corridos',          float:12, tier:1 },
+  { id:'s7',  label:'Faturamento semanal + 7 dias corridos',          float:14, tier:1 },
+  { id:'t10', label:'Faturamento a cada 10 dias + 10 dias corridos',  float:20, tier:2 },
+  { id:'q15', label:'Faturamento a cada 15 dias + 15 dias corridos',  float:30, tier:3 },
+];
+
+const ISS          = 0.05;
+const PIS_COF      = 0.0365;
+const TAX          = ISS + PIS_COF;   // 8.65%
+const MIN_MGMT     = 0.015;           // 1.5% margem mínima
+const TX_COST      = 1.50;            // R$ por transação
+const VIP_FEE      = 50;              // R$ fixo VIP
+const LABOR_BURDEN = 0.75;            // 75% encargos trabalhistas
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let state = {
+  fopType:  'credit',
+  fopOption: null,
+  feeModel: 'transaction',
+  customFees: { domOnline: '', domOffline: '', intl: '' },
+};
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const fmt   = v => v.toLocaleString('pt-BR', {style:'currency',currency:'BRL',minimumFractionDigits:2});
+const fmtN  = (v,d=2) => v.toLocaleString('pt-BR', {minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtTx = v => Math.round(v).toLocaleString('pt-BR');
+const fmtCons = v => fmtN(v, 2); // decimal consultants
+
+function getVal(id, def=0) {
+  const el = document.getElementById(id);
+  if (!el) return def;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? def : v;
+}
+
+// ═══════════════════════════════════════════
+// BUILD TRANSACTION TABLE
+// ═══════════════════════════════════════════
+function buildTxTable() {
+  const tbody = document.getElementById('txBody');
+  tbody.innerHTML = '';
+  TYPES.forEach(t => {
+    const bc = t.badge==='vip'?'badge-vip':t.badge==='int'?'badge-int':'badge-dom';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="label">
+        <span class="badge ${bc}">${t.id}</span>
+        <span style="display:block;font-size:11px;color:var(--muted);margin-top:2px">${t.label}</span>
+      </td>
+      <td><input type="number" min="0" id="${t.id}_count" placeholder="0" oninput="updateTotals()" style="text-align:right"/></td>
+      <td><input type="number" min="0" id="${t.id}_fin" placeholder="0,00" oninput="updateTotals()" style="text-align:right"/></td>
+      <td>${t.onlineCapable
+        ? `<input type="number" min="0" max="100" id="${t.id}_online" placeholder="0" oninput="updateTotals()" style="text-align:right"/>`
+        : `<span style="color:var(--muted);font-size:11px">N/A</span><input type="hidden" id="${t.id}_online" value="0"/>`
+      }</td>
+      <td id="${t.id}_onlineTx" style="color:var(--muted)">0</td>
+      <td id="${t.id}_offlineTx" style="color:var(--muted)">0</td>`;
+    tbody.appendChild(row);
+  });
+}
+
+function updateTotals() {
+  let totCount=0, totFin=0, totOnline=0, totOffline=0;
+  TYPES.forEach(t => {
+    const count  = getVal(`${t.id}_count`);
+    const pct    = t.onlineCapable ? getVal(`${t.id}_online`) : 0;
+    const online  = count * pct / 100;
+    const offline = count - online;
+    document.getElementById(`${t.id}_onlineTx`).textContent  = fmtTx(online);
+    document.getElementById(`${t.id}_offlineTx`).textContent = fmtTx(offline);
+    totCount  += count;
+    totFin    += getVal(`${t.id}_fin`);
+    totOnline += online;
+    totOffline += offline;
+  });
+  document.getElementById('tot-count').textContent  = fmtTx(totCount);
+  document.getElementById('tot-fin').textContent    = fmt(totFin);
+  document.getElementById('tot-online').textContent = fmtTx(totOnline);
+  document.getElementById('tot-offline').textContent= fmtTx(totOffline);
+  if (document.getElementById('section-3').classList.contains('active')) updatePreview();
+}
+
+// ═══════════════════════════════════════════
+// FOP
+// ═══════════════════════════════════════════
+function buildFOPOptions() {
+  const container = document.getElementById('fopOptions');
+  container.innerHTML = '';
+  FOP_OPTIONS.forEach(opt => {
+    let tag, cls;
+    if (opt.tier===1) { tag='≤15 dias (+1,5%)';  cls='tag-green'; }
+    if (opt.tier===2) { tag='16-20 dias (+2,5%)'; cls='tag-yellow'; }
+    if (opt.tier===3) { tag='21-30 dias (+3%)';   cls='tag-orange'; }
+    const div = document.createElement('div');
+    div.className = 'fop-option'+(state.fopOption===opt.id?' selected':'');
+    div.id = 'fopOpt_'+opt.id;
+    div.innerHTML = `
+      <label style="cursor:pointer;display:flex;align-items:center;gap:12px;width:100%">
+        <span style="flex:1;font-size:13px">${opt.label}</span>
+        <span class="fop-tag ${cls}">Float ≈ ${opt.float} dias</span>
+        <span class="fop-tag" style="background:#f1f5f9;color:#64748b">${tag}</span>
+      </label>`;
+    div.onclick = () => selectFOP(opt.id);
+    container.appendChild(div);
+  });
+}
+
+function selectFOP(id) {
+  state.fopOption = id;
+  document.querySelectorAll('.fop-option').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('fopOpt_'+id);
+  if (el) el.classList.add('selected');
+  updateFOPSummary();
+  if (document.getElementById('section-3').classList.contains('active')) updatePreview();
+}
+
+function updateFOP() {
+  const type = document.querySelector('input[name="fopType"]:checked').value;
+  state.fopType = type;
+  document.getElementById('fopFloatCard').style.display = type==='invoice' ? '' : 'none';
+  if (type==='invoice') { buildFOPOptions(); updateFOPSummary(); }
+  else { state.fopOption=null; document.getElementById('fopSummaryCard').style.display='none'; }
+  if (document.getElementById('section-3').classList.contains('active')) updatePreview();
+}
+
+function updateFOPSummary() {
+  const card = document.getElementById('fopSummaryCard');
+  const body = document.getElementById('fopSummary');
+  if (!state.fopOption) { card.style.display='none'; return; }
+  const opt = FOP_OPTIONS.find(o=>o.id===state.fopOption);
+  if (!opt) { card.style.display='none'; return; }
+  card.style.display='';
+  const msgs = [
+    `<div class="alert alert-success">✅ Aprovado. Float de <strong>${opt.float} dias</strong> — será aplicado <strong>+1,5%</strong> de margem financeira nos FEEs.</div>`,
+    `<div class="alert alert-warning">⚠️ Aprovado com custo extra. Float de <strong>${opt.float} dias</strong> — será aplicado <strong>+2,5%</strong> nos FEEs.</div>`,
+    `<div class="alert alert-danger">🔴 Float de <strong>${opt.float} dias</strong>. Requer <strong>autorização da Diretoria Comercial</strong>. Será cobrado <strong>+3%</strong> sobre o montante faturado além do FEE.</div>`,
+  ];
+  body.innerHTML = msgs[opt.tier-1];
+}
+
+// ═══════════════════════════════════════════
+// CALCULATION ENGINE
+// ═══════════════════════════════════════════
+function calculate() {
+  const byType = {};
+  let totalSalaryBase=0, totalLaborBurden=0, totalTx=0, totalFin=0;
+  // Category aggregates for fee-per-product
+  let domOnlineTx=0, domOfflineTx=0, intTx=0;
+  let domOnlineCost=0, domOfflineCost=0, intCost=0, vipCost=0;
+
+  TYPES.forEach(t => {
+    const count     = getVal(`${t.id}_count`);
+    const fin       = getVal(`${t.id}_fin`);
+    const pct       = t.onlineCapable ? getVal(`${t.id}_online`) : 0;
+    const onlineTx  = count * pct / 100;
+    const offlineTx = count - onlineTx;
+
+    // Decimal consultants — no rounding
+    const consultants    = offlineTx > 0 ? offlineTx / t.capacity : 0;
+    const salaryBase     = consultants * t.salary;
+    const laborBurden    = salaryBase * LABOR_BURDEN;
+    const personnelTotal = salaryBase + laborBurden;            // × 1.75
+    const txCostThis     = count * TX_COST;
+    const totalCostThis  = personnelTotal + txCostThis;
+
+    byType[t.id] = {
+      count, fin, pct, onlineTx, offlineTx,
+      consultants, salaryBase, laborBurden, personnelTotal, txCostThis, totalCostThis,
+      consultantType: t.consultantType, salary: t.salary,
+    };
+
+    totalSalaryBase  += salaryBase;
+    totalLaborBurden += laborBurden;
+    totalTx          += count;
+    totalFin         += fin;
+
+    // Category buckets for FEE por Produto
+    if (['AIRDOM','HOTDOM','CARDOM'].includes(t.id)) {
+      domOnlineTx   += onlineTx;
+      domOfflineTx  += offlineTx;
+      domOnlineCost += onlineTx * TX_COST;                     // no personnel for online
+      domOfflineCost += personnelTotal + offlineTx * TX_COST;
+    } else if (t.id === 'RODOV') {
+      domOfflineTx  += count;
+      domOfflineCost += totalCostThis;
+    } else if (['AIRINT','HOTINT','CARINT'].includes(t.id)) {
+      intTx     += count;
+      intCost   += totalCostThis;
+    } else if (t.id === 'VIP') {
+      vipCost   += totalCostThis;
+    }
+  });
+
+  const totalPersonnel  = totalSalaryBase + totalLaborBurden;
+  const transactionCost = totalTx * TX_COST;
+  const subtotalCost    = totalPersonnel + transactionCost;
+
+  // Minimum gross revenue = costs / (1 - taxes - margin)
+  const minGross    = subtotalCost > 0 ? subtotalCost / (1 - TAX - MIN_MGMT) : 0;
+  const taxISS      = minGross * ISS;
+  const taxPisCof   = minGross * PIS_COF;
+  const marginAmt   = minGross * MIN_MGMT;
+
+  // FOP multiplier
+  let fopMult=1, fopTier=0, fopWarning=null;
+  if (state.fopType==='invoice' && state.fopOption) {
+    const opt = FOP_OPTIONS.find(o=>o.id===state.fopOption);
+    if (opt) {
+      fopTier=opt.tier;
+      if (opt.tier===1) fopMult=1.015;
+      else if (opt.tier===2) fopMult=1.025;
+      else if (opt.tier===3) { fopMult=1.03; fopWarning='Condição 21-30 dias requer autorização da Diretoria Comercial e cobrança de 3% adicional sobre o montante faturado.'; }
+    }
+  }
+
+  // VIP fixed revenue
+  const vipRevenue = byType.VIP.count * VIP_FEE;
+
+  // Revenue needed via FEE (after FOP and VIP deduction)
+  const minGrossFOP  = minGross * fopMult;
+  let feeRevNeeded   = Math.max(0, minGrossFOP - vipRevenue);
+
+  // Non-VIP aggregates
+  const nonVipTx  = TYPES.filter(t=>t.id!=='VIP').reduce((s,t)=>s+byType[t.id].count, 0);
+  const nonVipFin = TYPES.filter(t=>t.id!=='VIP').reduce((s,t)=>s+byType[t.id].fin,   0);
+
+  // Standard FEE formats
+  const transactionFee = nonVipTx  > 0 ? feeRevNeeded / nonVipTx  : 0;
+  const managementFee  = nonVipFin > 0 ? (feeRevNeeded / nonVipFin) * 100 : 0;
+  const flatFee        = feeRevNeeded;
+
+  // Commission model (full)
+  const comByType = {};
+  TYPES.forEach(t => {
+    let com = 0;
+    if (t.id==='AIRDOM') com = Math.max(40 * byType[t.id].count, 0.10 * byType[t.id].fin);
+    else if (t.id==='AIRINT') com = 0.06 * byType[t.id].fin;
+    else if (t.id==='VIP')   com = byType[t.id].count * VIP_FEE;
+    else                     com = 0.10 * byType[t.id].fin;
+    comByType[t.id] = com;
+  });
+  const totalCommission  = Object.values(comByType).reduce((a,b)=>a+b,0);
+  const commissionProfit = totalCommission - subtotalCost;
+
+  // Misto model: hotel + car commission, aerial + RODOV via FEE, VIP fixed
+  const mistoTerrestrialCom = ['HOTDOM','HOTINT','CARDOM','CARINT']
+    .reduce((s,id) => s + 0.10 * byType[id].fin, 0);
+  const mistoFeeNeeded    = Math.max(0, minGrossFOP - vipRevenue - mistoTerrestrialCom);
+  const mistoAerialTx     = ['AIRDOM','AIRINT','RODOV'].reduce((s,id)=>s+byType[id].count,0);
+  const mistoAerialFin    = ['AIRDOM','AIRINT','RODOV'].reduce((s,id)=>s+byType[id].fin,0);
+  const mistoTransFee     = mistoAerialTx  > 0 ? mistoFeeNeeded / mistoAerialTx  : 0;
+  const mistoMgmtFee      = mistoAerialFin > 0 ? (mistoFeeNeeded / mistoAerialFin) * 100 : 0;
+  const mistoFlatFee      = mistoFeeNeeded;
+
+  // FEE por Produto — minimum fees per category (each category self-sustaining)
+  const div = (1 - TAX - MIN_MGMT);
+  const fppDomOnlineMin  = (domOnlineTx  > 0 && domOnlineCost  > 0) ? (domOnlineCost  / div) / domOnlineTx  : 0;
+  const fppDomOfflineMin = (domOfflineTx > 0 && domOfflineCost > 0) ? (domOfflineCost / div) / domOfflineTx : 0;
+  const fppIntMin        = (intTx        > 0 && intCost        > 0) ? (intCost        / div) / intTx        : 0;
+  // Apply FOP multiplier to suggested fees
+  const fppDomOnlineSug  = fppDomOnlineMin  * fopMult;
+  const fppDomOfflineSug = fppDomOfflineMin * fopMult;
+  const fppIntSug        = fppIntMin        * fopMult;
+
+  // Custom fees (user input from state)
+  const fppDomOnlineCustom  = state.customFees.domOnline  !== '' ? parseFloat(state.customFees.domOnline)  : null;
+  const fppDomOfflineCustom = state.customFees.domOffline !== '' ? parseFloat(state.customFees.domOffline) : null;
+  const fppIntCustom        = state.customFees.intl       !== '' ? parseFloat(state.customFees.intl)       : null;
+
+  const fppDomOnlineFee  = fppDomOnlineCustom  ?? fppDomOnlineSug;
+  const fppDomOfflineFee = fppDomOfflineCustom ?? fppDomOfflineSug;
+  const fppIntFee        = fppIntCustom        ?? fppIntSug;
+
+  const fppDomOnlineRev  = fppDomOnlineFee  * domOnlineTx;
+  const fppDomOfflineRev = fppDomOfflineFee * domOfflineTx;
+  const fppIntRev        = fppIntFee        * intTx;
+  const fppVipRev        = vipRevenue;
+  const fppTotalRev      = fppDomOnlineRev + fppDomOfflineRev + fppIntRev + fppVipRev;
+  const fppShortfall     = fppTotalRev - minGrossFOP;
+
+  // Incentives
+  const incentiveAirdom = 0.035 * byType.AIRDOM.fin;
+  const incentiveAirint = 0.015 * byType.AIRINT.fin;
+  const totalIncentives = incentiveAirdom + incentiveAirint;
+
+  // Consultant summary (decimal)
+  const consultantSummary = { junior:0, pleno:0, senior:0 };
+  TYPES.forEach(t => { consultantSummary[byType[t.id].consultantType] += byType[t.id].consultants; });
+
+  return {
+    byType, totalSalaryBase, totalLaborBurden, totalPersonnel, totalTx, totalFin,
+    transactionCost, subtotalCost,
+    minGross, taxISS, taxPisCof, marginAmt,
+    fopMult, fopTier, fopWarning, minGrossFOP,
+    vipRevenue, feeRevNeeded, nonVipTx, nonVipFin,
+    transactionFee, managementFee, flatFee,
+    comByType, totalCommission, commissionProfit,
+    mistoTerrestrialCom, mistoFeeNeeded, mistoAerialTx, mistoAerialFin,
+    mistoTransFee, mistoMgmtFee, mistoFlatFee,
+    domOnlineTx, domOfflineTx, intTx,
+    fppDomOnlineSug, fppDomOfflineSug, fppIntSug,
+    fppDomOnlineFee, fppDomOfflineFee, fppIntFee,
+    fppDomOnlineRev, fppDomOfflineRev, fppIntRev, fppVipRev, fppTotalRev, fppShortfall,
+    incentiveAirdom, incentiveAirint, totalIncentives,
+    consultantSummary,
+  };
+}
+
+// ═══════════════════════════════════════════
+// STEP 3 — MODEL UPDATE + PREVIEW
+// ═══════════════════════════════════════════
+function updateModel() {
+  state.feeModel = document.querySelector('input[name="feeModel"]:checked').value;
+  document.getElementById('panel-perprod').className = 'extra-panel'+(state.feeModel==='perprod'?' show':'');
+  document.getElementById('panel-misto').className   = 'extra-panel'+(state.feeModel==='misto'  ?' show':'');
+  updatePreview();
+}
+
+function updateFPP(category, value) {
+  state.customFees[category] = value;
+  updatePreview();
+}
+
+function renderFPPTable(r) {
+  const rows = [
+    { label:'DOM Online',  tx:r.domOnlineTx,  sug:r.fppDomOnlineSug,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev,  cat:'domOnline',  costBase: r.domOnlineTx  * TX_COST },
+    { label:'DOM Offline', tx:r.domOfflineTx, sug:r.fppDomOfflineSug, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev, cat:'domOffline', costBase: null },
+    { label:'Internacional', tx:r.intTx,     sug:r.fppIntSug,        fee:r.fppIntFee,        rev:r.fppIntRev,        cat:'intl',       costBase: null },
+  ];
+  let tbody = '';
+  rows.forEach(row => {
+    const ok = row.fee >= (row.sug * 0.999);
+    const statusCls = row.tx===0 ? 'fpp-status' : (ok ? 'fpp-status fpp-ok' : 'fpp-status fpp-danger');
+    const statusTxt = row.tx===0 ? '–' : (ok ? '✓ OK' : '⚠ Abaixo do mínimo');
+    const valStr = state.customFees[row.cat] !== '' ? state.customFees[row.cat] : '';
+    tbody += `<tr>
+      <td class="label">${row.label}</td>
+      <td>${fmtTx(row.tx)}</td>
+      <td>${row.tx>0 ? fmt(row.sug) : '–'}</td>
+      <td><input type="number" class="fee-custom" value="${valStr}" placeholder="${row.tx>0?fmtN(row.sug):0}"
+          oninput="updateFPP('${row.cat}',this.value)" step="0.01" min="0"
+          ${row.tx===0?'disabled':''}/></td>
+      <td>${row.tx>0 ? fmt(row.rev) : '–'}</td>
+      <td><span class="${statusCls}">${statusTxt}</span></td>
+    </tr>`;
+  });
+  // VIP row (fixed)
+  tbody += `<tr style="background:#fffbf0">
+    <td class="label">VIP</td>
+    <td>${fmtTx(r.byType.VIP.count)}</td>
+    <td>${fmt(VIP_FEE)}</td>
+    <td><input type="number" value="${VIP_FEE}" disabled style="background:#f8fafc;color:var(--muted)"/></td>
+    <td>${fmt(r.fppVipRev)}</td>
+    <td><span class="fpp-status fpp-ok">Fixo</span></td>
+  </tr>`;
+
+  const sfOk = r.fppShortfall >= 0;
+  const foot = `
+    <tr style="font-weight:700;background:#f8fafc">
+      <td class="label">TOTAL</td>
+      <td>${fmtTx(r.nonVipTx + r.byType.VIP.count)}</td>
+      <td>–</td>
+      <td>–</td>
+      <td>${fmt(r.fppTotalRev)}</td>
+      <td><span class="fpp-status ${sfOk?'fpp-ok':'fpp-danger'}">${sfOk?'✓ Viável':'⚠ Insuficiente'}</span></td>
+    </tr>
+    <tr style="background:${sfOk?'#dcfce7':'#fee2e2'}">
+      <td class="label" colspan="3">Receita necessária (mín. com FOP)</td>
+      <td colspan="2" style="text-align:right;font-weight:700">${fmt(r.minGrossFOP)}</td>
+      <td></td>
+    </tr>
+    <tr style="background:${sfOk?'#dcfce7':'#fee2e2'}">
+      <td class="label" colspan="3">${sfOk?'Superávit':'Déficit'}</td>
+      <td colspan="2" style="text-align:right;font-weight:700;color:${sfOk?'var(--success)':'var(--danger)'}">
+        ${sfOk?'':'-'} ${fmt(Math.abs(r.fppShortfall))}
+      </td>
+      <td></td>
+    </tr>`;
+
+  document.getElementById('fppBody').innerHTML = tbody;
+  document.getElementById('fppFoot').innerHTML = foot;
+}
+
+function renderMistoPreview(r) {
+  const comRows = ['HOTDOM','HOTINT','CARDOM','CARINT'].map(id => {
+    const tc = TYPES.find(t=>t.id===id);
+    const com = 0.10 * r.byType[id].fin;
+    return `<tr><td class="label">${id} – ${tc.label}</td><td>10% de ${fmt(r.byType[id].fin)}</td><td>${fmt(com)}</td></tr>`;
+  }).join('');
+
+  document.getElementById('mistoPreview').innerHTML = `
+    <div class="two-col">
+      <div>
+        <strong style="color:var(--primary);font-size:12px">✈ AÉREO + RODOVIÁRIO → via FEE</strong>
+        <div style="margin-top:10px">
+          <div class="brow"><span>FEE necessário (aéreo+rodov)</span><span class="bval rev">${fmt(r.mistoFeeNeeded)}</span></div>
+          <div class="brow"><span>Transaction FEE sugerido</span><span class="bval">${fmt(r.mistoTransFee)}/tx</span></div>
+          <div class="brow"><span>Management FEE sugerido</span><span class="bval">${fmtN(r.mistoMgmtFee)}% do gasto</span></div>
+          <div class="brow"><span>Flat FEE sugerido</span><span class="bval">${fmt(r.mistoFlatFee)}/mês</span></div>
+          <div class="brow"><span style="font-size:11px;color:var(--muted)">Inclui: AIRDOM, AIRINT, RODOV (${fmtTx(r.mistoAerialTx)} tx)</span></div>
+        </div>
+      </div>
+      <div>
+        <strong style="color:var(--primary);font-size:12px">🏨🚗 HOTEL + CARRO → via Comissão</strong>
+        <div style="overflow-x:auto;margin-top:10px">
+          <table>
+            <thead><tr><th class="left">Produto</th><th class="left">Base</th><th>Comissão</th></tr></thead>
+            <tbody>${comRows}</tbody>
+            <tfoot>
+              <tr style="font-weight:700;background:#f8fafc">
+                <td class="label" colspan="2">Total comissão terrestre</td>
+                <td>${fmt(r.mistoTerrestrialCom)}</td>
+              </tr>
+              <tr style="background:#fef9c3">
+                <td class="label" colspan="2">VIP (fixo R$ 50)</td>
+                <td>${fmt(r.vipRevenue)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    ${r.mistoFeeNeeded <= 0 ? `<div class="alert alert-success" style="margin-top:12px">🎉 A comissão terrestre + VIP já cobre todos os custos. O FEE aéreo gerará margem adicional.</div>` : ''}`;
+}
+
+function updatePreview() {
+  const r = calculate();
+  const body = document.getElementById('previewBody');
+
+  if (state.feeModel === 'perprod') renderFPPTable(r);
+  if (state.feeModel === 'misto')   renderMistoPreview(r);
+
+  let modelHtml = '';
+  if (state.feeModel==='commission') {
+    const ok = r.commissionProfit >= 0;
+    modelHtml = `
+      <div class="metric ${ok?'success':'danger'}">
+        <div class="mlabel">Resultado Comissionamento</div>
+        <div class="mvalue">${fmt(r.commissionProfit)}</div>
+        <div class="msub">${ok?'Cobre os custos':'⚠ Abaixo dos custos'}</div>
+      </div>
+      <div class="metric accent">
+        <div class="mlabel">Total via Fornecedores</div>
+        <div class="mvalue">${fmt(r.totalCommission)}</div>
+        <div class="msub">Sem FEE ao cliente</div>
+      </div>`;
+  } else if (state.feeModel==='misto') {
+    const ok = r.mistoFeeNeeded >= 0;
+    modelHtml = `
+      <div class="metric success">
+        <div class="mlabel">FEE Aéreo Necessário</div>
+        <div class="mvalue">${fmt(r.mistoFeeNeeded)}</div>
+        <div class="msub">Após comissão terrestre + VIP</div>
+      </div>
+      <div class="metric accent">
+        <div class="mlabel">Comissão Terrestre</div>
+        <div class="mvalue">${fmt(r.mistoTerrestrialCom)}</div>
+        <div class="msub">Hotel + Carro (10%)</div>
+      </div>`;
+  } else if (state.feeModel==='perprod') {
+    const ok = r.fppShortfall >= 0;
+    modelHtml = `
+      <div class="metric ${ok?'success':'danger'}">
+        <div class="mlabel">Receita FEE por Produto</div>
+        <div class="mvalue">${fmt(r.fppTotalRev)}</div>
+        <div class="msub">${ok?'Viável':'⚠ Abaixo do mínimo'}</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Mínimo Necessário</div>
+        <div class="mvalue">${fmt(r.minGrossFOP)}</div>
+        <div class="msub">Com FOP aplicado</div>
+      </div>`;
+  } else {
+    const feeLabel = state.feeModel==='transaction' ? fmt(r.transactionFee)+' / tx'
+                   : state.feeModel==='management'  ? fmtN(r.managementFee)+'% do gasto'
+                   : fmt(r.flatFee)+' / mês';
+    modelHtml = `
+      <div class="metric success">
+        <div class="mlabel">FEE Mínimo Sugerido</div>
+        <div class="mvalue">${feeLabel}</div>
+        <div class="msub">Custos + impostos + margem 1,5%</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Receita Mensal Necessária</div>
+        <div class="mvalue">${fmt(r.feeRevNeeded)}</div>
+        <div class="msub">Excluindo VIP (FEE fixo R$ 50)</div>
+      </div>`;
+  }
+
+  body.innerHTML = `
+    <div class="metric-grid" style="margin-bottom:10px">
+      <div class="metric">
+        <div class="mlabel">Salários Base</div>
+        <div class="mvalue">${fmt(r.totalSalaryBase)}</div>
+        <div class="msub">${fmtCons(r.consultantSummary.junior)} jr · ${fmtCons(r.consultantSummary.pleno)} pl · ${fmtCons(r.consultantSummary.senior)} sr</div>
+      </div>
+      <div class="metric warning">
+        <div class="mlabel">Encargos Trabalhistas (75%)</div>
+        <div class="mvalue">${fmt(r.totalLaborBurden)}</div>
+        <div class="msub">Total pessoal: ${fmt(r.totalPersonnel)}</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Custo Transacional</div>
+        <div class="mvalue">${fmt(r.transactionCost)}</div>
+        <div class="msub">${fmtTx(r.totalTx)} tx × R$ 1,50</div>
+      </div>
+      <div class="metric danger">
+        <div class="mlabel">Subtotal Operacional</div>
+        <div class="mvalue">${fmt(r.subtotalCost)}</div>
+        <div class="msub">Antes de impostos e margem</div>
+      </div>
+      ${modelHtml}
+    </div>
+    ${r.fopWarning ? `<div class="alert alert-warning">⚠️ ${r.fopWarning}</div>` : ''}`;
+}
+
+// ═══════════════════════════════════════════
+// RESULT — STEP 4
+// ═══════════════════════════════════════════
+function buildResult() {
+  const r = calculate();
+  const clientName = document.getElementById('clientName').value || 'Cliente';
+  const sellerName = document.getElementById('sellerName').value || '–';
+  const propDate   = document.getElementById('propDate').value   || new Date().toLocaleDateString('pt-BR');
+  const model      = state.feeModel;
+  const modelNames = { transaction:'Transaction FEE', management:'Management FEE', flat:'Flat FEE',
+                       commission:'Comissionamento', misto:'Modelo Misto', perprod:'FEE por Produto' };
+
+  // ── Consultant table rows ──
+  let consultantRows = '';
+  TYPES.forEach(t => {
+    const d = r.byType[t.id];
+    if (d.count === 0) return;
+    const tc = TYPES.find(x=>x.id===t.id);
+    const pc = d.consultantType==='junior'?'pill-junior':d.consultantType==='pleno'?'pill-pleno':'pill-senior';
+    consultantRows += `<tr>
+      <td class="label"><strong>${t.id}</strong> <span style="color:var(--muted);font-size:11px">${tc.label}</span></td>
+      <td>${fmtTx(d.count)}</td>
+      <td>${fmtTx(d.onlineTx)}</td>
+      <td>${fmtTx(d.offlineTx)}</td>
+      <td><span class="consultant-pill ${pc}">${d.consultantType}</span></td>
+      <td><strong>${fmtCons(d.consultants)}</strong></td>
+      <td>${fmt(d.salary)}</td>
+      <td>${fmt(d.salaryBase)}</td>
+      <td>${fmt(d.laborBurden)}</td>
+      <td>${fmt(d.personnelTotal)}</td>
+    </tr>`;
+  });
+
+  // ── Cost breakdown with real tax amounts ──
+  const fopNote = (r.fopTier >= 1 && state.fopType==='invoice')
+    ? `<div class="alert alert-warning">📅 FOP Faturado: multiplicador <strong>×${r.fopMult.toFixed(3)}</strong> (+${r.fopTier===1?'1,5':r.fopTier===2?'2,5':'3'}% margem financeira).</div>` : '';
+  const tier3Note = r.fopTier===3
+    ? `<div class="alert alert-danger">🔴 Prazo 21-30 dias: requer <strong>autorização da Diretoria Comercial</strong> e cobrança adicional de <strong>3% sobre o montante faturado</strong>.</div>` : '';
+
+  const breakdown = `
+    <div class="brow"><span>Salários base (consultores)</span><span class="bval cost">${fmt(r.totalSalaryBase)}</span></div>
+    <div class="brow"><span>Encargos trabalhistas (75%)</span><span class="bval cost">${fmt(r.totalLaborBurden)}</span></div>
+    <div class="brow" style="border-bottom:1px solid var(--border);padding-bottom:8px"><span style="font-weight:600">Custo total com pessoal (×1,75)</span><span class="bval cost">${fmt(r.totalPersonnel)}</span></div>
+    <div class="brow"><span>Custo transacional (${fmtTx(r.totalTx)} tx × R$ 1,50)</span><span class="bval cost">${fmt(r.transactionCost)}</span></div>
+    <div class="brow" style="font-weight:700"><span>Subtotal operacional</span><span class="bval cost">${fmt(r.subtotalCost)}</span></div>
+    <div class="brow" style="margin-top:8px"><span>ISS (5%)</span><span class="bval tax">${fmt(r.taxISS)}</span></div>
+    <div class="brow"><span>PIS + COFINS (3,65%)</span><span class="bval tax">${fmt(r.taxPisCof)}</span></div>
+    <div class="brow"><span>Margem mínima (1,5%)</span><span class="bval tax">${fmt(r.marginAmt)}</span></div>
+    <div class="brow total"><span>Receita bruta mínima necessária</span><span>${fmt(r.minGross)}</span></div>
+    <div class="brow" style="margin-top:8px"><span>VIP (${fmtTx(r.byType.VIP.count)} × R$ 50,00)</span><span class="bval rev">+ ${fmt(r.vipRevenue)}</span></div>
+    ${state.fopType==='invoice' && r.fopTier>0 ? `<div class="brow"><span>Ajuste FOP (×${r.fopMult.toFixed(3)})</span><span class="bval rev">aplicado</span></div>` : ''}
+    <div class="brow total"><span>Receita total necessária</span><span>${fmt(r.minGrossFOP)}</span></div>`;
+
+  // ── Fee section by model ──
+  let feeSection = '';
+
+  if (model==='commission') {
+    let comRows = '';
+    TYPES.forEach(t => {
+      const com = r.comByType[t.id]; if (!com) return;
+      const tc = TYPES.find(x=>x.id===t.id);
+      let rule = t.id==='AIRDOM' ? `max(${fmtTx(r.byType[t.id].count)} × R$ 40 ; 10% de ${fmt(r.byType[t.id].fin)})`
+               : t.id==='AIRINT' ? `6% de ${fmt(r.byType[t.id].fin)}`
+               : t.id==='VIP'    ? `${fmtTx(r.byType[t.id].count)} × R$ 50`
+               :                   `10% de ${fmt(r.byType[t.id].fin)}`;
+      comRows += `<tr><td class="label">${t.id} – ${tc.label}</td><td style="text-align:left;color:var(--muted)">${rule}</td><td>${fmt(com)}</td></tr>`;
+    });
+    const ok = r.commissionProfit >= 0;
+    feeSection = `
+      <div class="card">
+        <div class="card-header">🤝 Modelo Comissionamento</div>
+        <div class="card-body" style="overflow-x:auto">
+          <table>
+            <thead><tr><th class="left">Produto</th><th class="left">Base de Cálculo</th><th>Receita</th></tr></thead>
+            <tbody>${comRows}</tbody>
+            <tfoot>
+              <tr style="font-weight:700;background:#f8fafc"><td class="label" colspan="2">Total de Comissões</td><td>${fmt(r.totalCommission)}</td></tr>
+              <tr><td class="label" colspan="2">(-) Custo Operacional Total</td><td style="color:var(--danger)">(${fmt(r.subtotalCost)})</td></tr>
+              <tr style="font-weight:800;background:${ok?'#dcfce7':'#fee2e2'}">
+                <td class="label" colspan="2">Resultado</td>
+                <td class="${ok?'comm-positive':'comm-negative'}">${fmt(r.commissionProfit)}</td>
+              </tr>
+            </tfoot>
+          </table>
+          ${!ok?`<div class="alert alert-danger" style="margin-top:12px">⚠️ O comissionamento <strong>não cobre os custos operacionais</strong>. Revise o modelo de precificação.</div>`:''}
+        </div>
+      </div>`;
+
+  } else if (model==='misto') {
+    const comRows = ['HOTDOM','HOTINT','CARDOM','CARINT'].map(id => {
+      const tc = TYPES.find(t=>t.id===id);
+      return `<tr><td class="label">${id} – ${tc.label}</td><td>10% de ${fmt(r.byType[id].fin)}</td><td>${fmt(0.10*r.byType[id].fin)}</td></tr>`;
+    }).join('');
+    feeSection = `
+      <div class="card">
+        <div class="card-header">✂️ Modelo Misto</div>
+        <div class="card-body">
+          ${fopNote}${tier3Note}
+          <div class="two-col">
+            <div>
+              <strong style="color:var(--primary)">✈ Aéreo + Rodoviário → FEE</strong>
+              <div style="margin-top:12px">
+                <div class="fee-cards" style="grid-template-columns:1fr">
+                  <div class="fee-card"><div class="fc-title">Transaction FEE (aéreo+rodov)</div><div class="fc-value">${fmt(r.mistoTransFee)}</div><div class="fc-desc">por transação (${fmtTx(r.mistoAerialTx)} tx)</div></div>
+                  <div class="fee-card"><div class="fc-title">Management FEE (aéreo+rodov)</div><div class="fc-value">${fmtN(r.mistoMgmtFee)}%</div><div class="fc-desc">sobre volume aéreo+rodov (${fmt(r.mistoAerialFin)})</div></div>
+                  <div class="fee-card"><div class="fc-title">Flat FEE (aéreo+rodov)</div><div class="fc-value">${fmt(r.mistoFlatFee)}</div><div class="fc-desc">mensalidade fixa</div></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <strong style="color:var(--primary)">🏨🚗 Hotel + Carro → Comissão</strong>
+              <div style="overflow-x:auto;margin-top:12px">
+                <table>
+                  <thead><tr><th class="left">Produto</th><th class="left">Base</th><th>Comissão</th></tr></thead>
+                  <tbody>${comRows}</tbody>
+                  <tfoot>
+                    <tr style="font-weight:700;background:#f8fafc"><td class="label" colspan="2">Total comissão terrestre</td><td>${fmt(r.mistoTerrestrialCom)}</td></tr>
+                    <tr style="background:#fef9c3"><td class="label" colspan="2">VIP (${fmtTx(r.byType.VIP.count)} × R$ 50)</td><td>${fmt(r.vipRevenue)}</td></tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+  } else if (model==='perprod') {
+    const sfOk = r.fppShortfall >= 0;
+    const fppRows = [
+      { label:'DOM Online',    tx:r.domOnlineTx,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev  },
+      { label:'DOM Offline',   tx:r.domOfflineTx, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev },
+      { label:'Internacional', tx:r.intTx,        fee:r.fppIntFee,        rev:r.fppIntRev        },
+      { label:'VIP',           tx:r.byType.VIP.count, fee:VIP_FEE,        rev:r.fppVipRev        },
+    ].map(row => `<tr>
+      <td class="label">${row.label}</td>
+      <td>${fmtTx(row.tx)}</td>
+      <td>${fmt(row.fee)}</td>
+      <td>${fmt(row.rev)}</td>
+    </tr>`).join('');
+    feeSection = `
+      <div class="card">
+        <div class="card-header">🗂 Transaction FEE por Produto</div>
+        <div class="card-body" style="overflow-x:auto">
+          ${fopNote}${tier3Note}
+          <table>
+            <thead><tr><th class="left">Categoria</th><th>Transações</th><th>FEE Unitário</th><th>Receita Mensal</th></tr></thead>
+            <tbody>${fppRows}</tbody>
+            <tfoot>
+              <tr style="font-weight:700;background:#f8fafc"><td class="label" colspan="3">Total Receita FEE</td><td>${fmt(r.fppTotalRev)}</td></tr>
+              <tr><td class="label" colspan="3">Receita mínima necessária</td><td style="color:var(--muted)">${fmt(r.minGrossFOP)}</td></tr>
+              <tr style="font-weight:800;background:${sfOk?'#dcfce7':'#fee2e2'}">
+                <td class="label" colspan="3">${sfOk?'Superávit':'Déficit'}</td>
+                <td class="${sfOk?'comm-positive':'comm-negative'}">${sfOk?'':'-'}${fmt(Math.abs(r.fppShortfall))}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>`;
+
+  } else {
+    // Standard models: transaction / management / flat
+    feeSection = `
+      <div class="card">
+        <div class="card-header">💰 Precificação Recomendada</div>
+        <div class="card-body">
+          ${fopNote}${tier3Note}
+          <div class="fee-cards">
+            <div class="fee-card ${model==='transaction'?'active-model':''}">
+              <div class="fc-title">🔢 Transaction FEE</div>
+              <div class="fc-value">${fmt(r.transactionFee)}</div>
+              <div class="fc-desc">por transação (exceto VIP)</div>
+              ${model==='transaction'?'<div style="margin-top:8px"><span class="fop-tag tag-green">Modelo selecionado</span></div>':''}
+            </div>
+            <div class="fee-card ${model==='management'?'active-model':''}">
+              <div class="fc-title">📈 Management FEE</div>
+              <div class="fc-value">${fmtN(r.managementFee)}%</div>
+              <div class="fc-desc">sobre o volume financeiro total (exceto VIP)</div>
+              ${model==='management'?'<div style="margin-top:8px"><span class="fop-tag tag-green">Modelo selecionado</span></div>':''}
+            </div>
+            <div class="fee-card ${model==='flat'?'active-model':''}">
+              <div class="fc-title">📆 FLAT FEE</div>
+              <div class="fc-value">${fmt(r.flatFee)}</div>
+              <div class="fc-desc">mensalidade fixa (exceto VIP)</div>
+              ${model==='flat'?'<div style="margin-top:8px"><span class="fop-tag tag-green">Modelo selecionado</span></div>':''}
+            </div>
+            <div class="fee-card">
+              <div class="fc-title">✈ VIP (fixo)</div>
+              <div class="fc-value">R$ 50,00</div>
+              <div class="fc-desc">por transação VIP (imutável)</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── Incentives ──
+  const incSection = `
+    <div class="incentive-box">
+      <div class="ibtitle">🌟 Incentivos de Companhias Aéreas — não incluídos na precificação</div>
+      <div class="incentive-row">
+        <span>Cias Domésticas (3,5% de ${fmt(r.byType.AIRDOM.fin)})</span>
+        <strong>${fmt(r.incentiveAirdom)}</strong>
+      </div>
+      <div class="incentive-row">
+        <span>Cias Internacionais (1,5% de ${fmt(r.byType.AIRINT.fin)})</span>
+        <strong>${fmt(r.incentiveAirint)}</strong>
+      </div>
+      <div class="incentive-row" style="margin-top:6px">
+        <span style="font-size:13px">Incentivos mensais</span>
+        <strong style="font-size:18px">${fmt(r.totalIncentives)}</strong>
+      </div>
+      <div class="incentive-row">
+        <span style="font-size:13px">Incentivos anuais estimados</span>
+        <strong style="font-size:20px">${fmt(r.totalIncentives * 12)}</strong>
+      </div>
+      <div style="font-size:11px;opacity:.65;margin-top:8px">Os incentivos são receita adicional da agência e <strong>não</strong> foram considerados nos cálculos de FEE acima.</div>
+    </div>`;
+
+  // ── Assemble ──
+  document.getElementById('resultContent').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:22px;font-weight:800;color:var(--primary)">${clientName}</div>
+        <div style="color:var(--muted);font-size:13px">Vendedor: ${sellerName} · Data: ${propDate}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--muted)">Modelo selecionado</div>
+        <div style="font-size:16px;font-weight:700;color:var(--accent)">${modelNames[model]}</div>
+      </div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric"><div class="mlabel">Total Transações/mês</div><div class="mvalue">${fmtTx(r.totalTx)}</div><div class="msub">${fmtTx(r.nonVipTx)} não-VIP + ${fmtTx(r.byType.VIP.count)} VIP</div></div>
+      <div class="metric"><div class="mlabel">Volume Financeiro</div><div class="mvalue">${fmt(r.totalFin)}</div><div class="msub">Gasto mensal em viagens</div></div>
+      <div class="metric warning"><div class="mlabel">Custo Operacional Total</div><div class="mvalue">${fmt(r.subtotalCost)}</div><div class="msub">Pessoal (×1,75) + Transacional</div></div>
+      <div class="metric success">
+        <div class="mlabel">Equipe Necessária</div>
+        <div class="mvalue">${fmtCons(r.consultantSummary.junior + r.consultantSummary.pleno + r.consultantSummary.senior)}</div>
+        <div class="msub">${fmtCons(r.consultantSummary.junior)} jr · ${fmtCons(r.consultantSummary.pleno)} pl · ${fmtCons(r.consultantSummary.senior)} sr</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">👥 Dimensionamento da Equipe</div>
+      <div class="card-body" style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th class="left">Produto</th>
+              <th>Total Tx</th>
+              <th>Online</th>
+              <th>Offline</th>
+              <th>Perfil</th>
+              <th>Consultores</th>
+              <th>Salário</th>
+              <th>Salário Base</th>
+              <th>Encargos (75%)</th>
+              <th>Custo Total Pessoal</th>
+            </tr>
+          </thead>
+          <tbody>${consultantRows || '<tr><td colspan="10" style="text-align:center;color:var(--muted)">Nenhuma transação informada.</td></tr>'}</tbody>
+          <tfoot>
+            <tr style="font-weight:700;background:#f8fafc">
+              <td class="label">TOTAL</td>
+              <td>${fmtTx(r.totalTx)}</td>
+              <td colspan="2">–</td>
+              <td>–</td>
+              <td>${fmtCons(r.consultantSummary.junior+r.consultantSummary.pleno+r.consultantSummary.senior)}</td>
+              <td>–</td>
+              <td>${fmt(r.totalSalaryBase)}</td>
+              <td>${fmt(r.totalLaborBurden)}</td>
+              <td>${fmt(r.totalPersonnel)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">💸 Composição de Custos e Receita Mínima</div>
+      <div class="card-body"><div style="max-width:500px">${breakdown}</div></div>
+    </div>
+
+    ${feeSection}
+
+    <div class="card">
+      <div class="card-header">🌟 Incentivos de Companhias Aéreas</div>
+      <div class="card-body">${incSection}</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+let currentStep = 1;
+function goStep(n) {
+  if (currentStep===2) { const c=document.querySelector('input[name="fopType"]:checked'); if(c) state.fopType=c.value; }
+  if (currentStep===3) { const c=document.querySelector('input[name="feeModel"]:checked'); if(c) state.feeModel=c.value; }
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.step-btn').forEach((b,i)=>{ b.classList.remove('active','done'); if(i+1<n) b.classList.add('done'); if(i+1===n) b.classList.add('active'); });
+  document.getElementById(`section-${n}`).classList.add('active');
+  currentStep=n;
+  if (n===3) updatePreview();
+  if (n===4) buildResult();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════
+function resetAll() {
+  if (!confirm('Deseja reiniciar e limpar todos os dados?')) return;
+  document.querySelectorAll('input[type=number],input[type=text]').forEach(el=>el.value='');
+  document.getElementById('fop-credit').checked=true;
+  document.getElementById('fee-transaction').checked=true;
+  state={ fopType:'credit', fopOption:null, feeModel:'transaction', customFees:{domOnline:'',domOffline:'',intl:''} };
+  document.getElementById('panel-perprod').className='extra-panel';
+  document.getElementById('panel-misto').className='extra-panel';
+  updateFOP(); updateTotals(); goStep(1);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  buildTxTable();
+  updateFOP();
+  document.getElementById('propDate').value = new Date().toLocaleDateString('pt-BR');
+});
+</script>
+</body>
+</html>
