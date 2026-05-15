@@ -720,14 +720,44 @@ function updateModel() {
 
 function updateFPP(category, value) {
   state.customFees[category] = value;
-  updatePreview();
+  // Atualiza só as células de resultado — não re-renderiza os inputs (preserva foco)
+  refreshFPPCells(calculate());
+}
+
+function refreshFPPCells(r) {
+  const rows = [
+    { cat:'domOnline',  tx:r.domOnlineTx,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev,  sug:r.fppDomOnlineSug  },
+    { cat:'domOffline', tx:r.domOfflineTx, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev, sug:r.fppDomOfflineSug },
+    { cat:'intl',       tx:r.intTx,        fee:r.fppIntFee,        rev:r.fppIntRev,        sug:r.fppIntSug        },
+  ];
+  rows.forEach(row => {
+    const ok = row.fee >= (row.sug * 0.999);
+    const revEl    = document.getElementById(`fpp-rev-${row.cat}`);
+    const statusEl = document.getElementById(`fpp-status-${row.cat}`);
+    if (revEl)    revEl.textContent = row.tx > 0 ? fmt(row.rev) : '–';
+    if (statusEl) {
+      statusEl.textContent = row.tx === 0 ? '–' : (ok ? '✓ OK' : '⚠ Abaixo do mínimo');
+      statusEl.className   = `fpp-status${row.tx===0 ? '' : (ok ? ' fpp-ok' : ' fpp-danger')}`;
+    }
+  });
+  const sfOk = r.fppShortfall >= 0;
+  const set = (id, txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
+  const setStyle = (id, prop, val) => { const el=document.getElementById(id); if(el) el.style[prop]=val; };
+  set('fpp-total-rev', fmt(r.fppTotalRev));
+  const viableEl = document.getElementById('fpp-viable');
+  if (viableEl) { viableEl.textContent = sfOk ? '✓ Viável' : '⚠ Insuficiente'; viableEl.className = `fpp-status ${sfOk?'fpp-ok':'fpp-danger'}`; }
+  set('fpp-needed', fmt(r.minGrossFOP));
+  set('fpp-diff-label', sfOk ? 'Superávit' : 'Déficit');
+  set('fpp-diff', (sfOk?'':'-')+' '+fmt(Math.abs(r.fppShortfall)));
+  setStyle('fpp-diff', 'color', sfOk ? 'var(--success)' : 'var(--danger)');
+  ['fpp-needed-row','fpp-diff-row'].forEach(id => setStyle(id, 'background', sfOk?'#dcfce7':'#fee2e2'));
 }
 
 function renderFPPTable(r) {
   const rows = [
-    { label:'DOM Online (mín. R$ 4,50)',  tx:r.domOnlineTx,  sug:r.fppDomOnlineSug,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev,  cat:'domOnline',  costBase: r.domOnlineTx  * TX_COST },
-    { label:'DOM Offline', tx:r.domOfflineTx, sug:r.fppDomOfflineSug, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev, cat:'domOffline', costBase: null },
-    { label:'Internacional', tx:r.intTx,     sug:r.fppIntSug,        fee:r.fppIntFee,        rev:r.fppIntRev,        cat:'intl',       costBase: null },
+    { label:'DOM Online (mín. R$ 4,50)',  tx:r.domOnlineTx,  sug:r.fppDomOnlineSug,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev,  cat:'domOnline'  },
+    { label:'DOM Offline',                tx:r.domOfflineTx, sug:r.fppDomOfflineSug, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev, cat:'domOffline' },
+    { label:'Internacional',              tx:r.intTx,        sug:r.fppIntSug,        fee:r.fppIntFee,        rev:r.fppIntRev,        cat:'intl'       },
   ];
   let tbody = '';
   rows.forEach(row => {
@@ -740,13 +770,12 @@ function renderFPPTable(r) {
       <td>${fmtTx(row.tx)}</td>
       <td>${row.tx>0 ? fmt(row.sug) : '–'}</td>
       <td><input type="number" class="fee-custom" value="${valStr}" placeholder="${row.tx>0?fmtN(row.sug):0}"
-          onchange="updateFPP('${row.cat}',this.value)" step="0.01" min="0"
+          oninput="updateFPP('${row.cat}',this.value)" step="0.01" min="0"
           ${row.tx===0?'disabled':''}/></td>
-      <td>${row.tx>0 ? fmt(row.rev) : '–'}</td>
-      <td><span class="${statusCls}">${statusTxt}</span></td>
+      <td id="fpp-rev-${row.cat}">${row.tx>0 ? fmt(row.rev) : '–'}</td>
+      <td><span id="fpp-status-${row.cat}" class="${statusCls}">${statusTxt}</span></td>
     </tr>`;
   });
-  // VIP row (fixed)
   tbody += `<tr style="background:#fffbf0">
     <td class="label">VIP</td>
     <td>${fmtTx(r.byType.VIP.count)}</td>
@@ -761,19 +790,18 @@ function renderFPPTable(r) {
     <tr style="font-weight:700;background:#f8fafc">
       <td class="label">TOTAL</td>
       <td>${fmtTx(r.nonVipTx + r.byType.VIP.count)}</td>
-      <td>–</td>
-      <td>–</td>
-      <td>${fmt(r.fppTotalRev)}</td>
-      <td><span class="fpp-status ${sfOk?'fpp-ok':'fpp-danger'}">${sfOk?'✓ Viável':'⚠ Insuficiente'}</span></td>
+      <td>–</td><td>–</td>
+      <td id="fpp-total-rev">${fmt(r.fppTotalRev)}</td>
+      <td><span id="fpp-viable" class="fpp-status ${sfOk?'fpp-ok':'fpp-danger'}">${sfOk?'✓ Viável':'⚠ Insuficiente'}</span></td>
     </tr>
-    <tr style="background:${sfOk?'#dcfce7':'#fee2e2'}">
+    <tr id="fpp-needed-row" style="background:${sfOk?'#dcfce7':'#fee2e2'}">
       <td class="label" colspan="3">Receita necessária (mín. com FOP)</td>
-      <td colspan="2" style="text-align:right;font-weight:700">${fmt(r.minGrossFOP)}</td>
+      <td colspan="2" style="text-align:right;font-weight:700" id="fpp-needed">${fmt(r.minGrossFOP)}</td>
       <td></td>
     </tr>
-    <tr style="background:${sfOk?'#dcfce7':'#fee2e2'}">
-      <td class="label" colspan="3">${sfOk?'Superávit':'Déficit'}</td>
-      <td colspan="2" style="text-align:right;font-weight:700;color:${sfOk?'var(--success)':'var(--danger)'}">
+    <tr id="fpp-diff-row" style="background:${sfOk?'#dcfce7':'#fee2e2'}">
+      <td class="label" colspan="3" id="fpp-diff-label">${sfOk?'Superávit':'Déficit'}</td>
+      <td colspan="2" style="text-align:right;font-weight:700;color:${sfOk?'var(--success)':'var(--danger)'}" id="fpp-diff">
         ${sfOk?'':'-'} ${fmt(Math.abs(r.fppShortfall))}
       </td>
       <td></td>
