@@ -1,4 +1,4 @@
-# PricingPro — Especificação Técnica v1.0
+# PricingPro — Especificação Técnica v1.1
 > Documento destinado ao time de tecnologia para construção do sistema de precificação dentro da infraestrutura corporativa.
 
 ---
@@ -24,7 +24,7 @@ A versão atual é uma SPA (Single Page Application) em HTML/JS puro, hospedada 
 | CARDOM   | Carro Doméstico        | ✅           | Junior           | 500 tx/mês           |
 | CARINT   | Carro Internacional    | ✅           | Senior           | 250 tx/mês           |
 | RODOV    | Rodoviário             | ❌           | Junior           | 500 tx/mês           |
-| VIP      | Viagens VIP            | ❌           | Senior           | 250 tx/mês           |
+| VIP      | Viagens VIP            | ❌           | Senior           | 100 tx/mês           |
 
 **Observação importante:** Transações online (canal digital/OBT) não requerem consultor. O cálculo de consultores aplica-se apenas às transações offline.
 
@@ -41,9 +41,9 @@ consultores_necessarios = transacoes_offline / capacidade_por_consultor
 
 | Perfil  | Salário Base |
 |---------|:------------:|
-| Junior  | R$ 2.800,00  |
+| Junior  | R$ 2.500,00  |
 | Pleno   | R$ 3.200,00  |
-| Senior  | R$ 3.800,00  |
+| Senior  | R$ 5.000,00  |
 
 **Encargos trabalhistas:** 75% sobre o salário base (INSS patronal, FGTS, férias, 13º, benefícios).
 
@@ -53,10 +53,10 @@ custo_total_consultor = salario_base × consultores × 1,75
 
 ### 2.4 Custo Transacional
 
-Toda transação — online ou offline — gera um custo operacional de **R$ 1,50** (sistemas, GDS, infraestrutura).
+Toda transação — online ou offline — gera um custo operacional de **R$ 3,10** (sistemas, GDS, infraestrutura).
 
 ```
-custo_transacional = total_transacoes × R$ 1,50
+custo_transacional = total_transacoes × R$ 3,10
 ```
 
 ### 2.5 Subtotal Operacional
@@ -72,6 +72,8 @@ subtotal_operacional = custo_total_pessoal + custo_transacional
 | ISS         | 5,00%    |
 | PIS + COFINS| 3,65%    |
 | **Total**   | **8,65%**|
+
+> ⚠️ **Regra crítica:** ISS, PIS e COFINS incidem **exclusivamente sobre a receita de FEE**. Comissões recebidas de fornecedores (hotel, carro, aéreo) **não** são tributadas por esses impostos.
 
 ### 2.7 Receita Bruta Mínima
 
@@ -100,23 +102,32 @@ Sem custo adicional. Nenhum multiplicador aplicado.
 
 ### 3.2 Faturado — Tabela de Float
 
-| Condição de Faturamento                       | Float Aprox. | Tier | Multiplicador |
-|-----------------------------------------------|:------------:|:----:|:-------------:|
-| Faturamento diário + 10 dias corridos         | ~11 dias     | 1    | ×1,015 (+1,5%) |
-| Faturamento semanal + 5 dias corridos         | ~12 dias     | 1    | ×1,015 (+1,5%) |
-| Faturamento semanal + 7 dias corridos         | ~14 dias     | 1    | ×1,015 (+1,5%) |
-| Faturamento a cada 10 dias + 10 dias corridos | ~20 dias     | 2    | ×1,025 (+2,5%) |
-| Faturamento a cada 15 dias + 15 dias corridos | ~30 dias     | 3    | ×1,03  (+3,0%) |
-| Acima de 30 dias                              | > 30 dias    | —    | ❌ Bloqueado   |
+O custo de capital é calculado com **juros compostos** sobre o volume financeiro total faturado (`volume_financeiro_total`) para o período de float de cada condição.
+
+| Condição de Faturamento                       | Float Aprox. | Tier | Taxa/mês |
+|-----------------------------------------------|:------------:|:----:|:--------:|
+| Faturamento diário + 10 dias corridos         | ~11 dias     | 1    | 1,5%     |
+| Faturamento semanal + 5 dias corridos         | ~12 dias     | 1    | 1,5%     |
+| Faturamento semanal + 7 dias corridos         | ~14 dias     | 1    | 1,5%     |
+| Faturamento a cada 10 dias + 10 dias corridos | ~20 dias     | 2    | 2,5%     |
+| Faturamento a cada 15 dias + 15 dias corridos | ~30 dias     | 3    | 3,0%     |
+| Acima de 30 dias                              | > 30 dias    | —    | ❌ Bloqueado |
 
 **Tier 3 (21–30 dias):** exige autorização da Diretoria Comercial. O custo extra de 3% é cobrado separadamente do FEE ao cliente, não embutido.
 
-### 3.3 Aplicação do Multiplicador FOP
+### 3.3 Aplicação do Custo de Capital FOP
+
+O custo de capital é calculado com juros compostos sobre o volume financeiro e adicionado à receita mínima necessária:
 
 ```
-receita_com_fop = receita_bruta_minima × multiplicador_fop
-fee_necessario  = max(0, receita_com_fop - receita_vip_fixa)
+custo_capital_fop = volume_financeiro_total × ((1 + taxa_mensal)^(float_dias / 30) - 1)
+
+receita_com_fop   = receita_bruta_minima + custo_capital_fop
+fee_necessario    = max(0, receita_com_fop - receita_vip_fixa)
 ```
+
+> Exemplo: volume R$ 500.000, float 14 dias, taxa 1,5%/mês →
+> custo_capital = 500.000 × ((1,015)^(14/30) − 1) ≈ R$ 3.487,00
 
 ---
 
@@ -166,11 +177,13 @@ flat_fee_mensal = receita_necessaria_via_fee
 Combinação de FEE para aéreo + comissão para terrestre (hotel e carro).
 
 ```
-comissao_terrestre = Σ (10% × volume_financeiro) para [HOTDOM, HOTINT, CARDOM, CARINT]
+comissao_terrestre   = Σ (10% × volume_financeiro) para [HOTDOM, HOTINT, CARDOM, CARINT]
 fee_aereo_necessario = max(0, receita_com_fop - receita_vip - comissao_terrestre)
 ```
 
 O FEE aéreo pode ser expresso em qualquer formato (Transaction, Management ou Flat), aplicado apenas sobre AIRDOM + AIRINT + RODOV.
+
+> ⚠️ **Regra obrigatória:** Mesmo quando `fee_aereo_necessario ≤ 0` (comissão terrestre + VIP já cobrem todos os custos), o sistema **deve sugerir obrigatoriamente um FEE mínimo de R$ 5,00/tx** para o aéreo. Nunca sugerir FEE zero para aéreo no modelo misto.
 
 ### 4.7 Transaction FEE por Produto (Categorias)
 
@@ -187,6 +200,11 @@ Permite definir FEEs distintos por categoria:
 ```
 fee_minimo_categoria = (custo_categoria / (1 - 0,0865 - 0,015)) / transacoes_categoria
 ```
+
+> ⚠️ **Restrições de sugestão para DOM Online:**
+> - FEE mínimo sugerido: **R$ 4,50/tx** (nunca sugerir abaixo desse valor)
+> - FEE máximo de referência: **R$ 9,10/tx**
+> - O FEE DOM Online sugerido deve sempre ser **menor que o DOM Offline** (online é mais barato por não requerer consultor)
 
 ---
 
@@ -334,21 +352,24 @@ Todos os parâmetros abaixo devem ser gerenciáveis pela área de negócio via p
 | Capacidade Junior (tx/mês)             | 500         |
 | Capacidade Pleno (tx/mês)              | 280         |
 | Capacidade Senior (tx/mês)             | 250         |
-| Salário Junior                         | R$ 2.800    |
+| Capacidade VIP (tx/mês)               | 100         |
+| Salário Junior                         | R$ 2.500    |
 | Salário Pleno                          | R$ 3.200    |
-| Salário Senior                         | R$ 3.800    |
+| Salário Senior                         | R$ 5.000    |
 | Encargos trabalhistas                  | 75%         |
-| Custo por transação                    | R$ 1,50     |
-| ISS                                    | 5,00%       |
-| PIS + COFINS                           | 3,65%       |
+| Custo por transação                    | R$ 3,10     |
+| ISS (incide só sobre FEE)              | 5,00%       |
+| PIS + COFINS (incide só sobre FEE)     | 3,65%       |
 | Margem mínima                          | 1,50%       |
 | Incentivo aéreo doméstico              | 3,50%       |
 | Incentivo aéreo internacional          | 1,50%       |
 | FEE fixo VIP                           | R$ 50,00    |
 | Float máximo permitido                 | 30 dias     |
-| FOP Tier 1 (multiplicador)             | 1,015       |
-| FOP Tier 2 (multiplicador)             | 1,025       |
-| FOP Tier 3 (multiplicador)             | 1,030       |
+| FOP Tier 1 (taxa/mês — juros compostos)| 1,5%        |
+| FOP Tier 2 (taxa/mês — juros compostos)| 2,5%        |
+| FOP Tier 3 (taxa/mês — juros compostos)| 3,0%        |
+| FEE mínimo aéreo no modelo misto       | R$ 5,00/tx  |
+| FEE mínimo DOM Online (FEE/Produto)    | R$ 4,50/tx  |
 | Comissão AIRDOM (R$/bilhete mínimo)    | R$ 40,00    |
 | Comissão AIRDOM (% alternativo)        | 10%         |
 | Comissão AIRINT                        | 6%          |

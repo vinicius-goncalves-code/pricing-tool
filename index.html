@@ -281,7 +281,7 @@
   <!-- ══════════ STEP 3 ══════════ -->
   <div class="section" id="section-3">
     <div class="section-title">Modelo de Precificação</div>
-    <div class="section-desc">Escolha o formato de cobrança. O sistema calcula o valor mínimo para cobrir custos (incluindo encargos trabalhistas 75%), impostos e margem mínima de 1,5%.</div>
+    <div class="section-desc">Escolha o formato de cobrança. O sistema calcula o valor mínimo para cobrir custos (incluindo encargos trabalhistas 75%), impostos e margem mínima de 1,5%. <strong>ISS, PIS e COFINS incidem exclusivamente sobre o FEE</strong> — comissões de fornecedores não são tributadas.</div>
 
     <div class="card">
       <div class="card-header">🏷 Formato de FEE</div>
@@ -369,29 +369,32 @@
 // CONSTANTS
 // ═══════════════════════════════════════════
 const TYPES = [
-  { id:'AIRDOM', label:'Aéreo Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'junior', capacity:500, salary:2800 },
-  { id:'AIRINT', label:'Aéreo Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:3800 },
+  { id:'AIRDOM', label:'Aéreo Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'junior', capacity:500, salary:2500 },
+  { id:'AIRINT', label:'Aéreo Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:5000 },
   { id:'HOTDOM', label:'Hotel Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'pleno',  capacity:280, salary:3200 },
-  { id:'HOTINT', label:'Hotel Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:3800 },
-  { id:'CARDOM', label:'Carro Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'junior', capacity:500, salary:2800 },
-  { id:'CARINT', label:'Carro Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:3800 },
-  { id:'RODOV',  label:'Rodoviário',          badge:'dom', onlineCapable:false, consultantType:'junior', capacity:500, salary:2800 },
-  { id:'VIP',    label:'VIP',                 badge:'vip', onlineCapable:false, consultantType:'senior', capacity:250, salary:3800, fixedFee:50 },
+  { id:'HOTINT', label:'Hotel Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:5000 },
+  { id:'CARDOM', label:'Carro Doméstico',     badge:'dom', onlineCapable:true,  consultantType:'junior', capacity:500, salary:2500 },
+  { id:'CARINT', label:'Carro Internacional', badge:'int', onlineCapable:true,  consultantType:'senior', capacity:250, salary:5000 },
+  { id:'RODOV',  label:'Rodoviário',          badge:'dom', onlineCapable:false, consultantType:'junior', capacity:500, salary:2500 },
+  { id:'VIP',    label:'VIP',                 badge:'vip', onlineCapable:false, consultantType:'senior', capacity:100, salary:5000, fixedFee:50 },
 ];
 
 const FOP_OPTIONS = [
-  { id:'d10', label:'Faturamento diário + 10 dias corridos',          float:11, tier:1 },
-  { id:'s5',  label:'Faturamento semanal + 5 dias corridos',          float:12, tier:1 },
-  { id:'s7',  label:'Faturamento semanal + 7 dias corridos',          float:14, tier:1 },
-  { id:'t10', label:'Faturamento a cada 10 dias + 10 dias corridos',  float:20, tier:2 },
-  { id:'q15', label:'Faturamento a cada 15 dias + 15 dias corridos',  float:30, tier:3 },
+  { id:'d10', label:'Faturamento diário + 10 dias corridos',          float:11, tier:1, monthlyRate:0.015 },
+  { id:'s5',  label:'Faturamento semanal + 5 dias corridos',          float:12, tier:1, monthlyRate:0.015 },
+  { id:'s7',  label:'Faturamento semanal + 7 dias corridos',          float:14, tier:1, monthlyRate:0.015 },
+  { id:'t10', label:'Faturamento a cada 10 dias + 10 dias corridos',  float:20, tier:2, monthlyRate:0.025 },
+  { id:'q15', label:'Faturamento a cada 15 dias + 15 dias corridos',  float:30, tier:3, monthlyRate:0.030 },
 ];
+
+const MISTO_MIN_AERIAL_FEE  = 5.00;  // FEE mínimo obrigatório para aéreo no modelo misto
+const FPP_DOM_ONLINE_MIN    = 4.50;  // FEE mínimo sugerido para DOM Online no FEE por Produto
 
 const ISS          = 0.05;
 const PIS_COF      = 0.0365;
 const TAX          = ISS + PIS_COF;   // 8.65%
 const MIN_MGMT     = 0.015;           // 1.5% margem mínima
-const TX_COST      = 1.50;            // R$ por transação
+const TX_COST      = 3.10;            // R$ por transação
 const VIP_FEE      = 50;              // R$ fixo VIP
 const LABOR_BURDEN = 0.75;            // 75% encargos trabalhistas
 
@@ -517,10 +520,13 @@ function updateFOPSummary() {
   const opt = FOP_OPTIONS.find(o=>o.id===state.fopOption);
   if (!opt) { card.style.display='none'; return; }
   card.style.display='';
+  const r = calculate();
+  const ratePct = fmtN(opt.monthlyRate * 100, 1);
+  const capCost = fmt(r.fopCapitalCost);
   const msgs = [
-    `<div class="alert alert-success">✅ Aprovado. Float de <strong>${opt.float} dias</strong> — será aplicado <strong>+1,5%</strong> de margem financeira nos FEEs.</div>`,
-    `<div class="alert alert-warning">⚠️ Aprovado com custo extra. Float de <strong>${opt.float} dias</strong> — será aplicado <strong>+2,5%</strong> nos FEEs.</div>`,
-    `<div class="alert alert-danger">🔴 Float de <strong>${opt.float} dias</strong>. Requer <strong>autorização da Diretoria Comercial</strong>. Será cobrado <strong>+3%</strong> sobre o montante faturado além do FEE.</div>`,
+    `<div class="alert alert-success">✅ Aprovado. Float de <strong>${opt.float} dias</strong> — custo de capital (juros compostos ${ratePct}%/mês): <strong>${capCost}</strong>. Valor embutido no FEE.</div>`,
+    `<div class="alert alert-warning">⚠️ Aprovado com custo extra. Float de <strong>${opt.float} dias</strong> — custo de capital (juros compostos ${ratePct}%/mês): <strong>${capCost}</strong>. Valor embutido no FEE.</div>`,
+    `<div class="alert alert-danger">🔴 Float de <strong>${opt.float} dias</strong>. Requer <strong>autorização da Diretoria Comercial</strong>. Custo de capital (juros compostos ${ratePct}%/mês): <strong>${capCost}</strong> + 3% adicional sobre o montante faturado.</div>`,
   ];
   body.innerHTML = msgs[opt.tier-1];
 }
@@ -588,15 +594,17 @@ function calculate() {
   const taxPisCof   = minGross * PIS_COF;
   const marginAmt   = minGross * MIN_MGMT;
 
-  // FOP multiplier
-  let fopMult=1, fopTier=0, fopWarning=null;
+  // FOP multiplier — juro composto sobre o volume financeiro faturado
+  let fopMult=1, fopTier=0, fopWarning=null, fopCapitalCost=0, fopRate=0, fopFloat=0;
   if (state.fopType==='invoice' && state.fopOption) {
     const opt = FOP_OPTIONS.find(o=>o.id===state.fopOption);
     if (opt) {
       fopTier=opt.tier;
-      if (opt.tier===1) fopMult=1.015;
-      else if (opt.tier===2) fopMult=1.025;
-      else if (opt.tier===3) { fopMult=1.03; fopWarning='Condição 21-30 dias requer autorização da Diretoria Comercial e cobrança de 3% adicional sobre o montante faturado.'; }
+      fopRate=opt.monthlyRate;
+      fopFloat=opt.float;
+      fopCapitalCost = totalFin * (Math.pow(1 + opt.monthlyRate, opt.float / 30) - 1);
+      fopMult = minGross > 0 ? (minGross + fopCapitalCost) / minGross : 1;
+      if (opt.tier===3) fopWarning='Condição 21-30 dias requer autorização da Diretoria Comercial e cobrança de 3% adicional sobre o montante faturado.';
     }
   }
 
@@ -638,14 +646,17 @@ function calculate() {
   const mistoTransFee     = mistoAerialTx  > 0 ? mistoFeeNeeded / mistoAerialTx  : 0;
   const mistoMgmtFee      = mistoAerialFin > 0 ? (mistoFeeNeeded / mistoAerialFin) * 100 : 0;
   const mistoFlatFee      = mistoFeeNeeded;
+  // Mínimo obrigatório de R$5/tx para aéreo no modelo misto
+  const mistoNeedsFeeFloor = mistoFeeNeeded <= 0;
+  const mistoTransFeeSug  = Math.max(MISTO_MIN_AERIAL_FEE, mistoAerialTx > 0 ? mistoFeeNeeded / mistoAerialTx : 0);
 
   // FEE por Produto — minimum fees per category (each category self-sustaining)
   const div = (1 - TAX - MIN_MGMT);
   const fppDomOnlineMin  = (domOnlineTx  > 0 && domOnlineCost  > 0) ? (domOnlineCost  / div) / domOnlineTx  : 0;
   const fppDomOfflineMin = (domOfflineTx > 0 && domOfflineCost > 0) ? (domOfflineCost / div) / domOfflineTx : 0;
   const fppIntMin        = (intTx        > 0 && intCost        > 0) ? (intCost        / div) / intTx        : 0;
-  // Apply FOP multiplier to suggested fees
-  const fppDomOnlineSug  = fppDomOnlineMin  * fopMult;
+  // Apply FOP multiplier to suggested fees; DOM Online tem mínimo de R$ 4,50
+  const fppDomOnlineSug  = Math.max(FPP_DOM_ONLINE_MIN, fppDomOnlineMin  * fopMult);
   const fppDomOfflineSug = fppDomOfflineMin * fopMult;
   const fppIntSug        = fppIntMin        * fopMult;
 
@@ -678,12 +689,12 @@ function calculate() {
     byType, totalSalaryBase, totalLaborBurden, totalPersonnel, totalTx, totalFin,
     transactionCost, subtotalCost,
     minGross, taxISS, taxPisCof, marginAmt,
-    fopMult, fopTier, fopWarning, minGrossFOP,
+    fopMult, fopTier, fopWarning, fopCapitalCost, fopRate, fopFloat, minGrossFOP,
     vipRevenue, feeRevNeeded, nonVipTx, nonVipFin,
     transactionFee, managementFee, flatFee,
     comByType, totalCommission, commissionProfit,
     mistoTerrestrialCom, mistoFeeNeeded, mistoAerialTx, mistoAerialFin,
-    mistoTransFee, mistoMgmtFee, mistoFlatFee,
+    mistoTransFee, mistoTransFeeSug, mistoNeedsFeeFloor, mistoMgmtFee, mistoFlatFee,
     domOnlineTx, domOfflineTx, intTx,
     fppDomOnlineSug, fppDomOfflineSug, fppIntSug,
     fppDomOnlineFee, fppDomOfflineFee, fppIntFee,
@@ -710,7 +721,7 @@ function updateFPP(category, value) {
 
 function renderFPPTable(r) {
   const rows = [
-    { label:'DOM Online',  tx:r.domOnlineTx,  sug:r.fppDomOnlineSug,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev,  cat:'domOnline',  costBase: r.domOnlineTx  * TX_COST },
+    { label:'DOM Online (mín. R$ 4,50)',  tx:r.domOnlineTx,  sug:r.fppDomOnlineSug,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev,  cat:'domOnline',  costBase: r.domOnlineTx  * TX_COST },
     { label:'DOM Offline', tx:r.domOfflineTx, sug:r.fppDomOfflineSug, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev, cat:'domOffline', costBase: null },
     { label:'Internacional', tx:r.intTx,     sug:r.fppIntSug,        fee:r.fppIntFee,        rev:r.fppIntRev,        cat:'intl',       costBase: null },
   ];
@@ -780,8 +791,8 @@ function renderMistoPreview(r) {
       <div>
         <strong style="color:var(--primary);font-size:12px">✈ AÉREO + RODOVIÁRIO → via FEE</strong>
         <div style="margin-top:10px">
-          <div class="brow"><span>FEE necessário (aéreo+rodov)</span><span class="bval rev">${fmt(r.mistoFeeNeeded)}</span></div>
-          <div class="brow"><span>Transaction FEE sugerido</span><span class="bval">${fmt(r.mistoTransFee)}/tx</span></div>
+          <div class="brow"><span>FEE necessário (aéreo+rodov)</span><span class="bval rev">${r.mistoNeedsFeeFloor ? 'Coberto pela comissão' : fmt(r.mistoFeeNeeded)}</span></div>
+          <div class="brow"><span>Transaction FEE sugerido</span><span class="bval">${fmt(r.mistoTransFeeSug)}/tx${r.mistoNeedsFeeFloor ? ' <span style="font-size:10px;background:#fef9c3;color:#92400e;padding:1px 6px;border-radius:8px">mínimo obrigatório</span>' : ''}</span></div>
           <div class="brow"><span>Management FEE sugerido</span><span class="bval">${fmtN(r.mistoMgmtFee)}% do gasto</span></div>
           <div class="brow"><span>Flat FEE sugerido</span><span class="bval">${fmt(r.mistoFlatFee)}/mês</span></div>
           <div class="brow"><span style="font-size:11px;color:var(--muted)">Inclui: AIRDOM, AIRINT, RODOV (${fmtTx(r.mistoAerialTx)} tx)</span></div>
@@ -807,7 +818,7 @@ function renderMistoPreview(r) {
         </div>
       </div>
     </div>
-    ${r.mistoFeeNeeded <= 0 ? `<div class="alert alert-success" style="margin-top:12px">🎉 A comissão terrestre + VIP já cobre todos os custos. O FEE aéreo gerará margem adicional.</div>` : ''}`;
+    ${r.mistoNeedsFeeFloor ? `<div class="alert alert-warning" style="margin-top:12px">🎉 A comissão terrestre + VIP já cobre todos os custos. O sistema sugere um <strong>FEE mínimo obrigatório de R$ 5,00/tx</strong> para o aéreo.</div>` : ''}`;
 }
 
 function updatePreview() {
@@ -889,7 +900,7 @@ function updatePreview() {
       <div class="metric">
         <div class="mlabel">Custo Transacional</div>
         <div class="mvalue">${fmt(r.transactionCost)}</div>
-        <div class="msub">${fmtTx(r.totalTx)} tx × R$ 1,50</div>
+        <div class="msub">${fmtTx(r.totalTx)} tx × ${fmt(TX_COST)}</div>
       </div>
       <div class="metric danger">
         <div class="mlabel">Subtotal Operacional</div>
@@ -936,7 +947,7 @@ function buildResult() {
 
   // ── Cost breakdown with real tax amounts ──
   const fopNote = (r.fopTier >= 1 && state.fopType==='invoice')
-    ? `<div class="alert alert-warning">📅 FOP Faturado: multiplicador <strong>×${r.fopMult.toFixed(3)}</strong> (+${r.fopTier===1?'1,5':r.fopTier===2?'2,5':'3'}% margem financeira).</div>` : '';
+    ? `<div class="alert alert-warning">📅 FOP Faturado — Custo de Capital (juros compostos): <strong>${fmt(r.fopCapitalCost)}</strong> (${fmtN(r.fopRate*100,1)}%/mês × ${r.fopFloat} dias sobre ${fmt(r.totalFin)}). Embutido no FEE.</div>` : '';
   const tier3Note = r.fopTier===3
     ? `<div class="alert alert-danger">🔴 Prazo 21-30 dias: requer <strong>autorização da Diretoria Comercial</strong> e cobrança adicional de <strong>3% sobre o montante faturado</strong>.</div>` : '';
 
@@ -944,14 +955,14 @@ function buildResult() {
     <div class="brow"><span>Salários base (consultores)</span><span class="bval cost">${fmt(r.totalSalaryBase)}</span></div>
     <div class="brow"><span>Encargos trabalhistas (75%)</span><span class="bval cost">${fmt(r.totalLaborBurden)}</span></div>
     <div class="brow" style="border-bottom:1px solid var(--border);padding-bottom:8px"><span style="font-weight:600">Custo total com pessoal (×1,75)</span><span class="bval cost">${fmt(r.totalPersonnel)}</span></div>
-    <div class="brow"><span>Custo transacional (${fmtTx(r.totalTx)} tx × R$ 1,50)</span><span class="bval cost">${fmt(r.transactionCost)}</span></div>
+    <div class="brow"><span>Custo transacional (${fmtTx(r.totalTx)} tx × ${fmt(TX_COST)})</span><span class="bval cost">${fmt(r.transactionCost)}</span></div>
     <div class="brow" style="font-weight:700"><span>Subtotal operacional</span><span class="bval cost">${fmt(r.subtotalCost)}</span></div>
-    <div class="brow" style="margin-top:8px"><span>ISS (5%)</span><span class="bval tax">${fmt(r.taxISS)}</span></div>
-    <div class="brow"><span>PIS + COFINS (3,65%)</span><span class="bval tax">${fmt(r.taxPisCof)}</span></div>
+    <div class="brow" style="margin-top:8px"><span>ISS (5% sobre FEE)</span><span class="bval tax">${fmt(r.taxISS)}</span></div>
+    <div class="brow"><span>PIS + COFINS (3,65% sobre FEE)</span><span class="bval tax">${fmt(r.taxPisCof)}</span></div>
     <div class="brow"><span>Margem mínima (1,5%)</span><span class="bval tax">${fmt(r.marginAmt)}</span></div>
-    <div class="brow total"><span>Receita bruta mínima necessária</span><span>${fmt(r.minGross)}</span></div>
+    <div class="brow total"><span>Receita bruta mínima necessária (FEE)</span><span>${fmt(r.minGross)}</span></div>
     <div class="brow" style="margin-top:8px"><span>VIP (${fmtTx(r.byType.VIP.count)} × R$ 50,00)</span><span class="bval rev">+ ${fmt(r.vipRevenue)}</span></div>
-    ${state.fopType==='invoice' && r.fopTier>0 ? `<div class="brow"><span>Ajuste FOP (×${r.fopMult.toFixed(3)})</span><span class="bval rev">aplicado</span></div>` : ''}
+    ${state.fopType==='invoice' && r.fopTier>0 ? `<div class="brow"><span>Custo de capital FOP (juros compostos)</span><span class="bval rev">+ ${fmt(r.fopCapitalCost)}</span></div>` : ''}
     <div class="brow total"><span>Receita total necessária</span><span>${fmt(r.minGrossFOP)}</span></div>`;
 
   // ── Fee section by model ──
@@ -999,12 +1010,13 @@ function buildResult() {
         <div class="card-header">✂️ Modelo Misto</div>
         <div class="card-body">
           ${fopNote}${tier3Note}
+          ${r.mistoNeedsFeeFloor ? `<div class="alert alert-warning">🎉 A comissão terrestre + VIP já cobre todos os custos. O sistema sugere um <strong>FEE mínimo obrigatório de R$ 5,00/tx</strong> para o aéreo.</div>` : ''}
           <div class="two-col">
             <div>
               <strong style="color:var(--primary)">✈ Aéreo + Rodoviário → FEE</strong>
               <div style="margin-top:12px">
                 <div class="fee-cards" style="grid-template-columns:1fr">
-                  <div class="fee-card"><div class="fc-title">Transaction FEE (aéreo+rodov)</div><div class="fc-value">${fmt(r.mistoTransFee)}</div><div class="fc-desc">por transação (${fmtTx(r.mistoAerialTx)} tx)</div></div>
+                  <div class="fee-card ${r.mistoNeedsFeeFloor?'active-model':''}"><div class="fc-title">Transaction FEE (aéreo+rodov)${r.mistoNeedsFeeFloor?' — mínimo obrigatório':''}</div><div class="fc-value">${fmt(r.mistoTransFeeSug)}</div><div class="fc-desc">por transação (${fmtTx(r.mistoAerialTx)} tx)</div></div>
                   <div class="fee-card"><div class="fc-title">Management FEE (aéreo+rodov)</div><div class="fc-value">${fmtN(r.mistoMgmtFee)}%</div><div class="fc-desc">sobre volume aéreo+rodov (${fmt(r.mistoAerialFin)})</div></div>
                   <div class="fee-card"><div class="fc-title">Flat FEE (aéreo+rodov)</div><div class="fc-value">${fmt(r.mistoFlatFee)}</div><div class="fc-desc">mensalidade fixa</div></div>
                 </div>
@@ -1030,7 +1042,7 @@ function buildResult() {
   } else if (model==='perprod') {
     const sfOk = r.fppShortfall >= 0;
     const fppRows = [
-      { label:'DOM Online',    tx:r.domOnlineTx,  fee:r.fppDomOnlineFee,  rev:r.fppDomOnlineRev  },
+      { label:'DOM Online (mín. R$ 4,50)', tx:r.domOnlineTx, fee:r.fppDomOnlineFee, rev:r.fppDomOnlineRev },
       { label:'DOM Offline',   tx:r.domOfflineTx, fee:r.fppDomOfflineFee, rev:r.fppDomOfflineRev },
       { label:'Internacional', tx:r.intTx,        fee:r.fppIntFee,        rev:r.fppIntRev        },
       { label:'VIP',           tx:r.byType.VIP.count, fee:VIP_FEE,        rev:r.fppVipRev        },
