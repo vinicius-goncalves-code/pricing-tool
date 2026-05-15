@@ -155,9 +155,28 @@
   .fpp-danger  { background: #fee2e2; color: #991b1b; }
 
   @media print {
+    @page { margin: 1.2cm; }
     header, .steps, .nav-buttons, .section:not(.active) { display: none !important; }
-    .card { break-inside: avoid; }
-    body { background: #fff; }
+    body { background: #fff; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .container { padding: 0; max-width: 100%; }
+    .card { break-inside: avoid; margin-bottom: 10px; border: 1px solid #ddd; }
+    .card-header { padding: 8px 14px; font-size: 11px; }
+    .card-body { padding: 12px; }
+    table { font-size: 8.5px; width: 100%; table-layout: fixed; }
+    th, td { padding: 3px 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    th.left, td.label { white-space: normal; }
+    .metric-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .metric { padding: 8px 10px; break-inside: avoid; }
+    .metric .mvalue { font-size: 15px; }
+    .metric .mlabel { font-size: 9px; }
+    .metric .msub { font-size: 9px; }
+    .fee-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .fee-card .fc-value { font-size: 18px; }
+    .incentive-box { padding: 14px; }
+    .two-col { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .alert { padding: 8px 12px; font-size: 10px; }
+    .approval-banner { font-size: 11px !important; padding: 14px 16px !important; }
+    div[style*="overflow-x:auto"] { overflow: visible; }
   }
   @media (max-width: 700px) {
     .steps { flex-wrap: wrap; }
@@ -1166,8 +1185,39 @@ function buildResult() {
       <div style="font-size:11px;opacity:.65;margin-top:8px">Os incentivos são receita adicional da agência e <strong>não</strong> foram considerados nos cálculos de FEE acima.</div>
     </div>`;
 
+  // ── Approval banner ──
+  const proposalSurplus = model === 'perprod'    ? r.fppShortfall
+                        : model === 'commission' ? r.commissionProfit
+                        : 0; // demais modelos usam fee mínimo sugerido, sempre cobrem os custos
+  const isDeficit       = proposalSurplus < 0;
+  const needsFopAprov   = r.fopTier >= 3 && state.fopType === 'invoice';
+
+  let approvalBanner;
+  if (isDeficit) {
+    approvalBanner = `
+      <div class="alert alert-danger approval-banner" style="font-size:14px;padding:18px 20px;margin-bottom:20px;border-width:2px">
+        <div style="font-size:18px;margin-bottom:4px">🚫 <strong>Proposta NÃO aprovada automaticamente</strong></div>
+        A receita proposta está <strong>${fmt(Math.abs(proposalSurplus))}</strong> abaixo da receita mínima necessária.
+        Esta proposta requer <strong>autorização da Diretoria Comercial</strong> antes de ser enviada ao cliente.
+      </div>`;
+  } else if (needsFopAprov) {
+    approvalBanner = `
+      <div class="alert alert-warning approval-banner" style="font-size:14px;padding:18px 20px;margin-bottom:20px;border-width:2px">
+        <div style="font-size:18px;margin-bottom:4px">⚠️ <strong>Proposta aprovada automaticamente</strong></div>
+        A precificação cobre todos os custos e margem mínima. Porém, a condição de pagamento selecionada
+        (FOP com float ≥ 30 dias) ainda requer <strong>autorização da Diretoria Comercial</strong> conforme política de FOP.
+      </div>`;
+  } else {
+    approvalBanner = `
+      <div class="alert alert-success approval-banner" style="font-size:14px;padding:18px 20px;margin-bottom:20px;border-width:2px">
+        <div style="font-size:18px;margin-bottom:4px">✅ <strong>Proposta aprovada automaticamente</strong></div>
+        A precificação cobre todos os custos, tributos e margem mínima de 1,5%. Pode ser enviada ao cliente.
+      </div>`;
+  }
+
   // ── Assemble ──
   document.getElementById('resultContent').innerHTML = `
+    ${approvalBanner}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-size:22px;font-weight:800;color:var(--primary)">${clientName}</div>
