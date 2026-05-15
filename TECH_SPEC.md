@@ -73,7 +73,7 @@ subtotal_operacional = custo_total_pessoal + custo_transacional
 | PIS + COFINS| 3,65%    |
 | **Total**   | **8,65%**|
 
-> ⚠️ **Regra crítica:** ISS, PIS e COFINS incidem **exclusivamente sobre a receita de FEE**. Comissões recebidas de fornecedores (hotel, carro, aéreo) **não** são tributadas por esses impostos.
+> ⚠️ **Regra crítica:** ISS, PIS e COFINS (8,65% total) incidem sobre **todas as receitas** da agência — FEE, comissões de fornecedores e incentivos de companhias aéreas.
 
 ### 2.7 Receita Bruta Mínima
 
@@ -170,7 +170,11 @@ flat_fee_mensal = receita_necessaria_via_fee
 | RODOV            | 10% do volume financeiro                             |
 | VIP              | R$ 50,00 por transação                               |
 
-**Validação:** `total_comissoes >= subtotal_operacional` para o modelo ser viável.
+**Validação:** as comissões também são tributadas (8,65%) e devem cobrir margem (1,5%). A viabilidade é:
+```
+receita_liquida_comissoes = total_comissoes × (1 - 0,0865 - 0,015)
+resultado = receita_liquida_comissoes - subtotal_operacional  ← deve ser ≥ 0
+```
 
 ### 4.6 Modelo Misto
 
@@ -358,8 +362,8 @@ Todos os parâmetros abaixo devem ser gerenciáveis pela área de negócio via p
 | Salário Senior                         | R$ 5.000    |
 | Encargos trabalhistas                  | 75%         |
 | Custo por transação                    | R$ 3,10     |
-| ISS (incide só sobre FEE)              | 5,00%       |
-| PIS + COFINS (incide só sobre FEE)     | 3,65%       |
+| ISS (incide sobre todas as receitas)   | 5,00%       |
+| PIS + COFINS (idem)                    | 3,65%       |
 | Margem mínima                          | 1,50%       |
 | Incentivo aéreo doméstico              | 3,50%       |
 | Incentivo aéreo internacional          | 1,50%       |
